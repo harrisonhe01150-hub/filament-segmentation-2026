@@ -1,0 +1,101 @@
+{
+  "status": "COMPLETED",
+  "images": 707,
+  "records": 1154,
+  "folds": [
+    {
+      "fold": 0,
+      "images": 142,
+      "pq": 0.4371248681138764,
+      "tp": 1074,
+      "fp": 587,
+      "fn": 573,
+      "matched_iou_sum": 723.0045318603516
+    },
+    {
+      "fold": 1,
+      "images": 142,
+      "pq": 0.44847753215229735,
+      "tp": 1118,
+      "fp": 547,
+      "fn": 609,
+      "matched_iou_sum": 760.6178945302963
+    },
+    {
+      "fold": 2,
+      "images": 141,
+      "pq": 0.43260644381901003,
+      "tp": 1099,
+      "fp": 655,
+      "fn": 592,
+      "matched_iou_sum": 745.1645994782448
+    },
+    {
+      "fold": 3,
+      "images": 141,
+      "pq": 0.4443529714352633,
+      "tp": 1047,
+      "fp": 568,
+      "fn": 540,
+      "matched_iou_sum": 711.4091072678566
+    },
+    {
+      "fold": 4,
+      "images": 141,
+      "pq": 0.4423900322707074,
+      "tp": 1007,
+      "fp": 509,
+      "fn": 540,
+      "matched_iou_sum": 677.5203344225883
+    }
+  ],
+  "pq": 0.4409160837976036,
+  "tp": 5345,
+  "fp": 2866,
+  "fn": 2854,
+  "matched_iou_sum": 3617.7164675593376,
+  "historical_rounded_reference": 0.4409,
+  "reference_verified": true,
+  "elapsed_seconds": 311.57900000000154,
+  "gpu_used": false,
+  "test_probabilities_used": false,
+  "test_labels_used": false,
+  "independent_final_validation": false,
+  "training_outputs_verified": {
+    "v2": {
+      "child_exits": [
+        {
+          "event": "proc_exit",
+          "fold": 0,
+          "code": 0
+        },
+        {
+          "event": "proc_exit",
+          "fold": 1,
+          "code": 0
+        }
+      ],
+      "no_encoder_fallback": true
+    },
+    "v2b": {
+      "child_exits": [
+        {
+          "event": "proc_exit",
+          "fold": 3,
+          "code": 0
+        },
+        {
+          "event": "proc_exit",
+          "fold": 2,
+          "code": 0
+        },
+        {
+          "event": "proc_exit",
+          "fold": 4,
+          "code": 0
+        }
+      ],
+      "no_encoder_fallback": true
+    }
+  }
+}

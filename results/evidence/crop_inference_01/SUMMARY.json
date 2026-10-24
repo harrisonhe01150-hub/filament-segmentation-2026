@@ -1,0 +1,114 @@
+{
+  "status": "COMPLETED",
+  "images": 284,
+  "arms": {
+    "full": {
+      "pq": 0.44287236608676056,
+      "tp": 2192,
+      "fp": 1134,
+      "fn": 1182,
+      "matched_iou_sum": 1483.622426390648
+    },
+    "tiles": {
+      "pq": 0.4374004049287947,
+      "tp": 2098,
+      "fp": 1030,
+      "fn": 1276,
+      "matched_iou_sum": 1421.9887164235115
+    },
+    "half_blend": {
+      "pq": 0.4420155207498358,
+      "tp": 2135,
+      "fp": 1031,
+      "fn": 1239,
+      "matched_iou_sum": 1445.390752851963
+    }
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "arms": {
+        "full": {
+          "pq": 0.4371248681138764,
+          "tp": 1074,
+          "fp": 587,
+          "fn": 573,
+          "matched_iou_sum": 723.0045318603516
+        },
+        "tiles": {
+          "pq": 0.43070118332600466,
+          "tp": 1012,
+          "fp": 514,
+          "fn": 635,
+          "matched_iou_sum": 683.3074273467064
+        },
+        "half_blend": {
+          "pq": 0.43513981586996653,
+          "tp": 1032,
+          "fp": 519,
+          "fn": 615,
+          "matched_iou_sum": 695.7885655760765
+        }
+      }
+    },
+    {
+      "fold": 1,
+      "arms": {
+        "full": {
+          "pq": 0.44847753215229735,
+          "tp": 1118,
+          "fp": 547,
+          "fn": 609,
+          "matched_iou_sum": 760.6178945302963
+        },
+        "tiles": {
+          "pq": 0.4437856948493873,
+          "tp": 1086,
+          "fp": 516,
+          "fn": 641,
+          "matched_iou_sum": 738.6812890768051
+        },
+        "half_blend": {
+          "pq": 0.448594965455348,
+          "tp": 1103,
+          "fp": 512,
+          "fn": 624,
+          "matched_iou_sum": 749.6021872758865
+        }
+      }
+    }
+  ],
+  "baseline_reference": 0.44287236608676056,
+  "baseline_matches": true,
+  "candidates": {
+    "tiles": {
+      "delta": -0.005471961157965888,
+      "fold_deltas": [
+        -0.006423684787871753,
+        -0.004691837302910062
+      ],
+      "image_wins": 120,
+      "image_losses": 153,
+      "image_ties": 11,
+      "passes_gate": false
+    },
+    "half_blend": {
+      "delta": -0.0008568453369247608,
+      "fold_deltas": [
+        -0.0019850522439098794,
+        0.00011743330305064026
+      ],
+      "image_wins": 128,
+      "image_losses": 144,
+      "image_ties": 12,
+      "passes_gate": false
+    }
+  },
+  "weights_changed": false,
+  "trained": false,
+  "test_labels_used": false,
+  "test_images_used": false,
+  "official_score": null,
+  "independent_final_validation": false,
+  "elapsed_seconds": 213.96800000000076
+}

@@ -1,0 +1,2 @@
+# Baseline training dependencies; complete GPU version freeze is still pending.
+-r requirements-training.txt

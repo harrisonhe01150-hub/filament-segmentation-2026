@@ -1,0 +1,38 @@
+[
+  {
+    "ref": 57554507,
+    "fileName": "sub_v2_5fold.csv",
+    "date": "2026-10-23T08:20:24.337000",
+    "description": "UNet effb4 1536, 5-fold ens, OOF707 PQ .4409",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.38",
+    "privateScore": ""
+  },
+  {
+    "ref": 57547798,
+    "fileName": "sub_v2_f01.csv",
+    "date": "2026-10-23T03:39:12.003000",
+    "description": "UNet effb4 1536 soft-label 50ep, folds0+1 ens, OOF PQ .4429",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.39",
+    "privateScore": ""
+  },
+  {
+    "ref": 57544611,
+    "fileName": "sub_v1_f01.csv",
+    "date": "2026-10-23T01:30:03.873000",
+    "description": "UNet effb4 1024 soft-label, folds0+1 ens, OOF PQ .4195",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.37",
+    "privateScore": ""
+  },
+  {
+    "ref": 57534211,
+    "fileName": "submission_candidate_pq15.csv",
+    "date": "2026-10-22T18:05:08.737000",
+    "description": "PQ15 H1024 MaskRCNN+refiner baseline (calibration)",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.28",
+    "privateScore": ""
+  }
+]
