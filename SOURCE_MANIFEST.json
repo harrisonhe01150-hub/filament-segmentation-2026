@@ -3,6 +3,7 @@
   "sha256": {
     "analysis/score_folds.py": "9aa96d9e5a83260718edc4fcbca3796d95e401d3df508d48d617067de4039ff1",
     "analysis/verify_full_oof.py": "33036deb119343cbb80373918aedb72644145f747f0c84e774217c335ac6b24b",
+    "configs/B1.json": "d276c2f5ee3e9d3272826ab6eabd9f7217b69c5fb529f3a5fd8b711b8ec68515",
     "configs/v2.json": "eb4b53e1563337ef0ef3179076d98208a8dbede027f813c4daded501e5e67ae7",
     "configs/v2b.json": "80dddf53095c78d9a2d2e2e069d45ff252fdce0b26dc6d790e727d59d4b36365",
     "docs/BASELINE_AND_PROVENANCE.txt": "d805cf44f31e83710b312f09238409dc73884a7e267ddd9f8443b9a663e33690",
@@ -26,8 +27,9 @@
     "src/make_submission.py": "e14aabedc3bc9b7561cf3bc0b23a520686c668830d73fc8432bc9f3cff6a465c",
     "src/postproc.py": "5adbc3ec075622a263fed64d20207399ec35936e33a469119c651ed10fa374ac",
     "src/predict.py": "f99e2284aa61a59edd3468050a2440847c98728454cd7b1b49521532c3dc107c",
-    "src/train_seg.py": "60739e77f29314d2f32bfc7e70553ee4db07621364bad27d8bb9c0743ebf91ba",
+    "src/train_seg.py": "9e18ada0bf60edf58e7a934dda9114fd1d6c88f83a51f0916c8cfa6cdb3f3f0f",
     "tests/test_cpu_portability.py": "0d4603367c278d60c162c8e178bcbe8e6e641d24533497d868dd19271be74ce8",
-    "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a"
+    "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a",
+    "tests/test_small_filament_sampling.py": "b5b55324be2615e927b08bbd8e6138cd2ac37a4e090d3182c6896d254c5550d3"
   }
 }
