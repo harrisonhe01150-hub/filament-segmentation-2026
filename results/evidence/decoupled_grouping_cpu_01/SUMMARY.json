@@ -1,0 +1,46 @@
+{
+  "images": 284,
+  "records": 457,
+  "results": {
+    "v2_closing": {
+      "tp": 2192,
+      "fp": 1134,
+      "fn": 1182,
+      "matched_iou_sum": 1483.622426390648,
+      "pq": 0.44287236608676056
+    },
+    "v7_closing": {
+      "tp": 2173,
+      "fp": 1230,
+      "fn": 1201,
+      "matched_iou_sum": 1475.6888884902,
+      "pq": 0.4354991555231518
+    },
+    "v7_grouping": {
+      "tp": 2138,
+      "fp": 1072,
+      "fn": 1236,
+      "matched_iou_sum": 1447.9316971302032,
+      "pq": 0.43983344384271056
+    },
+    "v2_mask_v7_grouping": {
+      "tp": 2136,
+      "fp": 1018,
+      "fn": 1238,
+      "matched_iou_sum": 1443.7659562826157,
+      "pq": 0.44233025621403665
+    }
+  },
+  "references_verified": {
+    "v2_closing": true,
+    "v7_closing": true,
+    "v7_grouping": true
+  },
+  "delta": -0.000542109872723906,
+  "image_wins": 78,
+  "image_losses": 78,
+  "image_ties": 128,
+  "date_groups": 263,
+  "leave_one_date_min_delta": -0.0012838405995478919,
+  "passes_research_gate": false
+}

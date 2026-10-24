@@ -1,0 +1,8 @@
+Baseline and provenance
+
+High-resolution semantic U-Net baseline: Claude workflow, EfficientNet-B4, 1536 input / 1024 crop / 50 epochs, date-grouped folds, multi-expert soft targets, BCE plus original soft Dice, 8-way TTA. Instance extraction uses threshold .4, grouping-only closing radius 8, min area 300, min mean .85.
+Original research used 707 physical training images, with each fold training on its complement. It does not mean each fold trained on all 707 images. Existing OOF folds were reused for research and are not independent final testing.
+Codex reviewed the source, independently verified outputs and historical public scores, added explicit failure guards and Windows CPU compatibility, and ran the recent negative loss/inference experiments. No extra GPU training was performed for this repository-layout adaptation.
+Negative results: see results/evidence/. Retain v2; do not repeat those experiments as untried ideas. Expert agreement is a reference, not a mathematical ceiling, and public score does not establish final placement or prizes.
+Original historical source remains in the owner's full handoff and private Kaggle notebooks. This staged code includes runtime guard fixes rather than claiming byte identity with the originally trained script. Historical CSV equality was checked from the corresponding frozen probabilities.
+The reviewed launcher passes synthetic process-failure checks; a fresh GPU run is not part of this staging test. Full GPU dependency locking and the final report remain outstanding.

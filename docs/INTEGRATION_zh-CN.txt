@@ -1,0 +1,29 @@
+上传到已有团队仓库的说明
+
+目标：https://github.com/harrisonhe01150-hub/filament-segmentation-2026
+本目录是待加入该仓库的文件，不是另一个完整 Git 仓库。把本目录里面的内容加入团队仓库根目录，保留内部结构；不要再套一层 GitHub_Upload_20261025_v2。
+按现有 PLAN.md：在自己的分支工作，通过 Pull Request 合入 main，并请一位队友审查。尚未在远程创建分支或 PR。
+不包含或替换团队原有 README.md、PLAN.md、LICENSE、.gitignore。
+
+代码布局
+src/：训练、PQ、后处理及 CSV 导出。
+configs/：主力 v2 的第0/1折、第2/3/4折配置。
+notebooks/Solar_UNet_Team_Reproduction.ipynb：已适配团队仓库目录；默认仅校验源文件并展示历史证据。
+analysis/：完整五折 OOF 评分程序。
+tests/：无需 GPU 或网络的合成自检。
+results/evidence/：小型结果摘要及官方 API 历史提交记录。
+requirements*.txt：CPU 与训练依赖。
+
+与完整交接包的区别
+不提交训练数据、模型权重、runs/、预测 .npz、submissions/、提交 CSV、压缩包、密钥或本地环境。
+原交接包可留在正式队友内部作为运行附件。需要运行 CPU OOF 或冻结预测导出时，通过自己的授权 Kaggle 账号取得数据/输出，在本地放入被 .gitignore 排除的目录。
+主力输出：zichanglu/solar-seg-v2（折0/1）和 zichanglu/solar-seg-v2b（折2/3/4）。私有输出可能需要所有者给正式队友添加 Notebook 协作者；不交换 API 密钥。
+
+使用与限制
+从仓库根目录或 notebooks/ 打开新 Notebook，默认不会训练、安装依赖、上传、提交比赛或联网。
+Notebook 已明确区分只展示历史证据、对缓存预测重评分、从缓存生成 CSV，以及真正重新训练；不能把缓存导出说成新图推理测试。
+完整五折研究 OOF PQ=0.4409160837976036；历史两折线上0.39、五折线上0.38。最近新损失和50/50集成都没有超过v2。
+CPU环境已验证；训练 requirements 仍有部分范围版本，尚未满足最终全部依赖锁定要求。最终干净 GPU 环境从训练到预测的验证仍须完成。本上传版不是最终完整参赛材料。
+新增源码哈希在 SOURCE_MANIFEST.json，按 LF 换行规范化后计算，兼容 Windows/Linux。修改代码后要同步更新该清单，或改为项目自己的版本校验方式。
+
+新增 scratch/.gitignore 会排除源码自检生成的临时文件与检查结果，无需修改团队现有 .gitignore。

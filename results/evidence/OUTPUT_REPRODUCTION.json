@@ -1,0 +1,70 @@
+{
+  "annotations_read": false,
+  "training": false,
+  "gpu_used": false,
+  "submitted": false,
+  "runs": {
+    "v2": {
+      "child_exits": [
+        {
+          "event": "proc_exit",
+          "fold": 0,
+          "code": 0
+        },
+        {
+          "event": "proc_exit",
+          "fold": 1,
+          "code": 0
+        }
+      ],
+      "folds": [
+        {
+          "fold": 0,
+          "epochs": 50,
+          "validation_count": 142,
+          "elapsed_seconds": 5943.2251007556915
+        },
+        {
+          "fold": 1,
+          "epochs": 50,
+          "validation_count": 142,
+          "elapsed_seconds": 6763.5997767448425
+        }
+      ]
+    },
+    "v7": {
+      "child_exits": [
+        {
+          "event": "proc_exit",
+          "fold": 0,
+          "code": 0
+        },
+        {
+          "event": "proc_exit",
+          "fold": 1,
+          "code": 0
+        }
+      ],
+      "folds": [
+        {
+          "fold": 0,
+          "epochs": 50,
+          "validation_count": 142,
+          "elapsed_seconds": 6619.24964427948
+        },
+        {
+          "fold": 1,
+          "epochs": 50,
+          "validation_count": 142,
+          "elapsed_seconds": 6649.834396123886
+        }
+      ]
+    }
+  },
+  "v2_v7_validation_files_aligned": true,
+  "submitted_csv_rows_reproduced_exactly": true,
+  "reference_csv_sha256": "b092e8696c653fa21bcf2569600af899b9c43248fb6d2b16f4aa4eb05e9ccb1e",
+  "reproduced_csv_sha256": "e72427e8c84eee46f59ebd8848336f4ba6f1ebbe41e09ddf18e4145118accd21",
+  "reproduced_rows": 1255,
+  "note": "CSV line endings may differ between Linux and Windows; compare every field/row."
+}
