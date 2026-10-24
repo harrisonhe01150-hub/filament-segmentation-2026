@@ -11,7 +11,8 @@ Output: one mask per solar filament in that image, with **no pixel shared betwee
 We submit three things at the end:
 
 1. A Kaggle submission CSV (one row per filament, COCO RLE counts)
-2. A public GitHub repo (this one) with `requirements.txt` and one notebook that runs the whole pipeline
+2. A public GitHub repo (this one) with `requirements.txt`, the final model weights, and one notebook that runs
+   the whole pipeline without retraining
 3. A 4-page technical report (organizers' Overleaf template), sent with the repo link through the organizers' Google form
 
 ## How we are judged
@@ -50,7 +51,8 @@ The host has said the leaderboard is only a first filter; the final ranking come
    may disqualify solutions that rely on AI-generated code the team does not understand
    ([host reply](https://www.kaggle.com/competitions/filament-segmentation-2026/discussion/724503)).
 6. Team limit is 5 submissions per day. Log every submission in `EXPERIMENTS.md`.
-7. Never commit data, model weights, `kaggle.json` or `.env` (already in `.gitignore`).
+7. Never commit data, training checkpoints, `kaggle.json` or `.env` (already in `.gitignore`). The one exception
+   is the final model's weights in `weights/` (see "Final weights" below).
 
 ## Roles
 
@@ -62,11 +64,14 @@ The host has said the leaderboard is only a first filter; the final ranking come
 
 Everyone reviews each other's pull requests, so each of us can explain the whole pipeline at the end.
 
+**Kaggle team:** Zichang Lu (team leader), xianyang zeng, Harrison He. The 5 submissions per day are shared by
+the whole team.
+
 ## Timeline
 
 ### Phase 1: Setup and first honest score (Oct 23 to Oct 27)
 
-- [ ] Everyone joins one Kaggle team; pick a team leader
+- [x] Everyone joins one Kaggle team (leader: Zichang Lu)
 - [ ] Download the data; agree on the folder layout under `data/` (not committed)
 - [ ] **Validation split (A):** hold out about 20% of training images. Split by observation date, not by image id:
       the same photo appears several times (once per annotator), and filaments last for days, so photos close in time
@@ -100,6 +105,8 @@ Every experiment gets one line in `EXPERIMENTS.md`: date, who, what changed, loc
 
 - [ ] Nov 9: final model chosen; no more training
 - [ ] Nov 9 to 10: final notebook runs end to end on a clean environment from `requirements.txt`
+- [ ] Nov 9 to 10: final weights committed to `weights/`; the notebook loads them and does not retrain
+- [ ] Nov 10: fresh clone into an empty folder, run the notebook, get the same predictions with no extra files
 - [ ] Nov 10 to 12: 4-page report: data, pipeline, post-processing, results (local PQ, Dice / IoU distributions,
       split / merge counts), examples of good and bad masks, what did not work
 - [ ] Nov 12: code cleanup: clear modules, docstrings, README instructions to reproduce
@@ -113,6 +120,15 @@ Every experiment gets one line in `EXPERIMENTS.md`: date, who, what changed, loc
 - Code in `src/`, notebooks in `notebooks/`, report in `report/`
 - Keep the final notebook thin: it calls functions from `src/`
 
+## Final weights
+
+The organizers require the model weights in the repo, so the notebook reproduces our predictions without
+retraining.
+
+- Only the final model goes in `weights/`. Training checkpoints stay out of git.
+- GitHub rejects files over 100 MB. If ours is bigger, save it in half precision or use Git LFS.
+- The notebook loads from `weights/` with a relative path.
+
 ## Compute
 
 - Kaggle notebooks: free GPU hours every week, per person
@@ -120,7 +136,7 @@ Every experiment gets one line in `EXPERIMENTS.md`: date, who, what changed, loc
 
 ## Open questions
 
-- Who is the Kaggle team leader, and which role does each of us take?
+- Which role does each of us take?
 - How do we use the multiple annotations of the same photo for training?
 
 ## Links
