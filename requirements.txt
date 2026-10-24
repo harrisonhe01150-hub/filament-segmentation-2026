@@ -1,2 +1,3 @@
 # Everything needed to train, predict and run the notebook; exact versions.
 -r requirements-training.txt
+matplotlib==3.11.2
