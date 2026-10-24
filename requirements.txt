@@ -1,2 +1,2 @@
-# Baseline training dependencies; complete GPU version freeze is still pending.
+# Everything needed to train, predict and run the notebook; exact versions.
 -r requirements-training.txt

@@ -71,7 +71,7 @@ def main():
         raise AssertionError('Failed requested model must stop')
     assert calls == ['efficientnet-b4']
     results['encoder_failure_does_not_change_architecture'] = True
-    (ROOT.parent / 'GUARD_TEST_RESULTS.json').write_text(json.dumps(results, indent=2))
+    (ROOT / 'scratch' / 'GUARD_TEST_RESULTS.json').write_text(json.dumps(results, indent=2))
     print(json.dumps(results, indent=2))
 
 

@@ -13,6 +13,8 @@ checkpoints/
 *.npy
 *.npz
 *.zip
+# ground-truth caches written by src/postproc.py (derived from competition annotations)
+*.pkl
 
 # Exception: the final model weights must be in the repo (organizers' rule)
 !weights/*.pt

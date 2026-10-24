@@ -56,11 +56,13 @@ The host has said the leaderboard is only a first filter; the final ranking come
 
 ## Roles
 
-| Role | Owns | Owner |
+Agreed on Oct 24; details, experiment rules and the day-by-day schedule are in [TEAM_ROLES.md](TEAM_ROLES.md).
+
+| Who | Experiment | Also owns |
 |---|---|---|
-| **A. Data & evaluation** | Data loading, train/validation split, local PQ scorer, RLE encode/decode, overlap check, submission writer | _TBD_ |
-| **B. Models** | Training and inference: baseline U-Net first, then stronger models | _TBD_ |
-| **C. Post-processing & report** | Turning pixel predictions into clean, non-overlapping filaments; final notebook; technical report | _TBD_ |
+| **Zichang** | A: spine auxiliary output | Report "Method"; Kaggle submissions; Google form |
+| **Harrison** | B: small-filament crop sampling and loss weighting | Repo, final notebook, reproducibility |
+| **xianyang** | C: boundary channel and splitting | Single evaluation point; report "Results and error analysis" |
 
 Everyone reviews each other's pull requests, so each of us can explain the whole pipeline at the end.
 
@@ -72,21 +74,22 @@ the whole team.
 ### Phase 1: Setup and first honest score (Oct 23 to Oct 27)
 
 - [x] Everyone joins one Kaggle team (leader: Zichang Lu)
-- [ ] Download the data; agree on the folder layout under `data/` (not committed)
-- [ ] **Validation split (A):** hold out about 20% of training images. Split by observation date, not by image id:
-      the same photo appears several times (once per annotator), and filaments last for days, so photos close in time
-      look alike. Both must stay on the same side of the split.
-- [ ] **Local scorer (A):** reproduce the PQ from the [official self-evaluation notebook](https://www.kaggle.com/code/azimahmadzadeh/self-evaluation-notebook)
-      and check that it gives the same numbers on a few test cases
-- [ ] **Baseline (B + C):** U-Net for "filament or not" per pixel, then split into connected components, drop tiny
-      blobs, encode as RLE, run the overlap check, submit
-- [ ] `requirements.txt` with pinned versions
+- [x] Download the data; agree on the folder layout under `data/` (not committed): `data/MAGFiLO_1.0_Kaggle_2026/`
+- [x] **Validation split (A):** 5 folds of about 20% each, grouped by observation day (`fold_of_files` in
+      `src/train_seg.py`), so the several annotations of one photo stay on the same side. Filaments last for days, so
+      neighbouring days in different folds still make the local score somewhat optimistic.
+- [x] **Local scorer (A):** reproduce the PQ from the [official self-evaluation notebook](https://www.kaggle.com/code/azimahmadzadeh/self-evaluation-notebook)
+      and check that it gives the same numbers on a few test cases. `src/common.py` `PQ` follows the same rules
+      (checked by reading both); a numeric cross-check is still open.
+- [x] **Baseline (B + C):** v2 EfficientNet-B4 U-Net, five-fold OOF PQ 0.44, public leaderboard 0.39
+- [x] `requirements.txt` with pinned versions
 
 **Done when:** we have a local PQ number and one honest leaderboard submission of about 0.30 or higher.
 
 ### Phase 2: Improve (Oct 28 to Nov 8)
 
-Ideas, roughly in order of expected payoff:
+The experiments we are actually running (A, B, C) and their pass rule are in [TEAM_ROLES.md](TEAM_ROLES.md).
+Original idea list, roughly in order of expected payoff:
 
 1. **Count the filaments right (C):** tune the minimum blob size; join fragments that belong to one filament
    (morphological closing, or merging nearby pieces with the same orientation); separate filaments that touch
@@ -136,7 +139,6 @@ retraining.
 
 ## Open questions
 
-- Which role does each of us take?
 - How do we use the multiple annotations of the same photo for training?
 
 ## Links

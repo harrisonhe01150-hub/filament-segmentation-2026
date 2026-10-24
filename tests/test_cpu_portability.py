@@ -42,5 +42,5 @@ assert len(list(tmp.glob('gt_cache_*_v1.pkl'))) == 2
 result = {'windows_cpu_path_matches_direct': True, 'cache_reused_for_same_input': True,
           'changed_annotation_invalidates_cache': True, 'original_cache_preserved': True,
           'real_annotations_read': False}
-(ROOT.parent / 'CPU_TEST_RESULTS.json').write_text(json.dumps(result, indent=2))
+(ROOT / 'scratch' / 'CPU_TEST_RESULTS.json').write_text(json.dumps(result, indent=2))
 print(json.dumps(result, indent=2))

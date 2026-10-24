@@ -52,10 +52,35 @@ One CSV for the whole test set, one row per predicted filament:
 
 | Path | Contents |
 |---|---|
-| `src/` | Reusable code (data loading, model, post-processing, RLE encoding) |
-| `notebooks/` | Exploration, plus the final end-to-end pipeline notebook |
+| `src/` | Training (`train_seg.py`), prediction from saved weights (`predict.py`), PQ metric, post-processing, CSV export |
+| `configs/` | Training configs (`v2.json` = folds 0/1, `v2b.json` = folds 2/3/4) |
+| `notebooks/` | End-to-end notebook |
+| `analysis/`, `tests/` | Five-fold OOF re-scoring; CPU self-tests |
+| `results/evidence/` | Small summaries of past runs and leaderboard submissions |
+| `scripts/` | `update_manifest.py`: run after changing code (the notebook checks file hashes) |
+| `weights/` | Final model weights only (added at the model freeze) |
 | `report/` | Technical report source |
 | `data/` | Competition data, local only (not committed) |
+
+## Setup
+
+Python 3.12. PyTorch comes from the PyTorch index (CUDA 12.8 build shown; drop `--index-url` for CPU or Apple):
+
+```bash
+python -m venv .venv
+.venv/Scripts/python -m pip install torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu128
+.venv/Scripts/python -m pip install -r requirements.txt
+```
+
+(On macOS/Linux use `.venv/bin/python`.) Download the competition data with your own Kaggle account and unzip it so
+that `data/MAGFiLO_1.0_Kaggle_2026/train/` and `data/MAGFiLO_1.0_Kaggle_2026/test/` exist.
+
+Train (CUDA only), then predict from saved weights (CUDA, MPS or CPU):
+
+```bash
+python src/train_seg.py --config configs/v2.json --out runs/v2
+python src/predict.py --weights runs/v2 --config configs/v2.json --out outputs/submission.csv
+```
 
 ## Rules worth remembering
 
