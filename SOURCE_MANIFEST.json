@@ -1,6 +1,7 @@
 {
   "hash_mode": "SHA256 after CRLF-to-LF normalization",
   "sha256": {
+    "analysis/official_pq_check.py": "8603ee1e19bc5a64ce90050f702009e872c86eb24aa45c849938f1ad786ff56b",
     "analysis/score_folds.py": "9aa96d9e5a83260718edc4fcbca3796d95e401d3df508d48d617067de4039ff1",
     "analysis/verify_full_oof.py": "33036deb119343cbb80373918aedb72644145f747f0c84e774217c335ac6b24b",
     "configs/v2.json": "eb4b53e1563337ef0ef3179076d98208a8dbede027f813c4daded501e5e67ae7",
@@ -19,7 +20,7 @@
     "results/evidence/softlabel_dice_01/SUMMARY.json": "49b0015d4c40c639a53d93c20e38862b64eaae3ad32782a795eea46435681d7c",
     "results/evidence/softlabel_half_blend_01/SUMMARY.json": "fc79b9982c8224035e1dd01755790b4700409bbf208b4def80527ca8f9f76492",
     "scratch/.gitignore": "240a3e0d37d2e86b614063f5347eb02d4f99ca6c254de6b82871ff8d95532a7d",
-    "scripts/build_notebook.py": "b5c5423697696d1270c4c69915f7f812f551b9d76405f29b7f1ce8df703337c2",
+    "scripts/build_notebook.py": "4126d4facf055452c14c8d0cbbf8875d4dfa3de9116dee9f4dde834191dc809d",
     "scripts/update_manifest.py": "fd63ebcc97892624fdc7169b2fda22d66d24ca7b4c11f804c2b829016baf3273",
     "src/common.py": "521606af0241258746866b028f6fd027c3d7076843ae6c1f28cc2b8cbce5c9d8",
     "src/fastsweep.py": "d2275b162e0d22f28e0e82441c4b097c76638234451ccaa5302556e747a5e65c",

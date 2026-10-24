@@ -93,7 +93,8 @@ print('written:', OUT)"""
 
 VIS_MD = """## What the masks look like
 
-Each colour is one predicted filament. Right: the averaged probability map (brighter = more likely filament)."""
+Each colour is one predicted filament, drawn as an outline. Left: the full disk. Right: zoomed in on the
+filaments."""
 
 VIS = """import matplotlib.pyplot as plt
 from pycocotools import mask as mu
@@ -105,18 +106,25 @@ def label_map(image):
         lab[mu.decode({'size': [2048, 2048], 'counts': counts.encode()}).astype(bool)] = n
     return lab
 
-show = [files[i] for i in np.argsort(-per_image)[:3]]
-fig, axes = plt.subplots(len(show), 2, figsize=(12, 6 * len(show)))
-rng = np.random.default_rng(0)
-for ax, image in zip(np.atleast_2d(axes), show):
-    i = files.index(image)
+def outlined(gray, lab, thickness):
+    rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+    for n in range(1, lab.max() + 1):
+        contours, _ = cv2.findContours((lab == n).astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        colour = tuple(int(255 * c) for c in plt.cm.tab10((n - 1) % 10)[:3])
+        cv2.drawContours(rgb, contours, -1, colour, thickness)
+    return rgb
+
+show = [files[i] for i in np.argsort(-per_image, kind='stable')[:3] if per_image[i] > 0]
+fig, axes = plt.subplots(len(show), 2, figsize=(12, 6 * len(show)), squeeze=False)
+for ax, image in zip(axes, show):
     gray = cv2.imread(str(TEST_IMAGES / image), cv2.IMREAD_GRAYSCALE)
     lab = label_map(image)
-    colours = rng.uniform(.2, 1, (lab.max() + 1, 3)); colours[0] = 0
-    overlay = np.where(lab[..., None] > 0, .45 * np.stack([gray / 255] * 3, -1) + .55 * colours[lab], np.stack([gray / 255] * 3, -1))
-    ax[0].imshow(overlay); ax[0].set_title(f'{image}: {lab.max()} filaments'); ax[0].axis('off')
-    prob = np.mean([cv2.resize(s[i], (2048, 2048), interpolation=cv2.INTER_LINEAR) for s in stacks], 0)
-    ax[1].imshow(prob, cmap='magma', vmin=0, vmax=255); ax[1].set_title('probability'); ax[1].axis('off')
+    ax[0].imshow(outlined(gray, lab, 8)); ax[0].set_title(f'{image}: {lab.max()} filaments'); ax[0].axis('off')
+    ys, xs = np.nonzero(lab)
+    pad = 80
+    y0, y1 = max(ys.min() - pad, 0), min(ys.max() + pad, 2047)
+    x0, x1 = max(xs.min() - pad, 0), min(xs.max() + pad, 2047)
+    ax[1].imshow(outlined(gray[y0:y1, x0:x1], lab[y0:y1, x0:x1], 2)); ax[1].set_title('zoom'); ax[1].axis('off')
 plt.tight_layout()"""
 
 VAL_MD = """## Local validation (out-of-fold)
