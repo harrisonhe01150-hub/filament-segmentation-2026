@@ -30,7 +30,8 @@ submission's CSV exactly, and the five-fold out-of-fold PQ re-scores to the reco
 deterministic on a given device: reloading the saved weights on the training GPU
 reproduces the probability maps produced during training bit for bit. Across devices, CPU (float32) and GPU (float16
 autocast) probability maps differ by at most 1/255 per pixel; the resulting masks agree with IoU 0.9996 at the 0.4
-threshold. A clean-clone run on a different machine (Apple MPS) is accepted when every mask matches the submitted
+threshold. A fresh clone on Windows, installed only by the README steps, passes `pip check`, both self-tests and the
+notebook end to end (Oct 24). A clean-clone run on a different machine (Apple MPS) is accepted when every mask matches the submitted
 CSV with IoU ≥ 0.999 (**TBD**: result of the Nov 10 cross-machine test). GPU training itself is not bit-for-bit
 deterministic, which is why the weights are part of the repository.
 
