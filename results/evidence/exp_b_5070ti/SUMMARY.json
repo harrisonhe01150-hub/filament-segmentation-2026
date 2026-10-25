@@ -1,0 +1,85 @@
+{
+  "note": "Experiment B on the RTX 5070 Ti, folds 0+1, v2 post-processing, official PQ rules (analysis/score_folds.py). See EXPERIMENTS.md.",
+  "control_v2": {
+    "combined_pq": 0.4397,
+    "folds": {
+      "0": {
+        "pq": 0.4334,
+        "tp": 1051,
+        "fp": 567,
+        "fn": 596
+      },
+      "1": {
+        "pq": 0.4456,
+        "tp": 1152,
+        "fp": 629,
+        "fn": 575
+      }
+    }
+  },
+  "B1_crop_and_weight": {
+    "combined_pq": 0.4367,
+    "folds": {
+      "0": {
+        "pq": 0.4337,
+        "tp": 1053,
+        "fp": 565,
+        "fn": 594
+      },
+      "1": {
+        "pq": 0.4395,
+        "tp": 1150,
+        "fp": 674,
+        "fn": 577
+      }
+    }
+  },
+  "B2_crop_only": {
+    "combined_pq": 0.4357,
+    "folds": {
+      "0": {
+        "pq": 0.432,
+        "tp": 1033,
+        "fp": 539,
+        "fn": 614
+      },
+      "1": {
+        "pq": 0.439,
+        "tp": 1136,
+        "fp": 651,
+        "fn": 591
+      }
+    }
+  },
+  "B3_weight_only": {
+    "combined_pq": 0.4419,
+    "folds": {
+      "0": {
+        "pq": 0.4403,
+        "tp": 1060,
+        "fp": 532,
+        "fn": 587
+      },
+      "1": {
+        "pq": 0.4434,
+        "tp": 1161,
+        "fp": 667,
+        "fn": 566
+      }
+    }
+  },
+  "ensembles_folds01_at_v2_settings": {
+    "E1_v2+ctrl": 0.4411,
+    "E2_v2+ctrl+B3": 0.4433,
+    "E3_all5": 0.442
+  },
+  "mask_shape_variants_5fold_oof": {
+    "baseline": 0.4409,
+    "fill_holes": 0.4409,
+    "close2_fill": 0.4406,
+    "close4_fill": 0.4404,
+    "dilate1": 0.409,
+    "erode1": 0.4266,
+    "open1": 0.441
+  }
+}
