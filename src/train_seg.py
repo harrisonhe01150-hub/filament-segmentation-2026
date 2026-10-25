@@ -252,7 +252,13 @@ def train_fold(fold, cfg, out_dir):
             W[i], cs = small_filament_maps(recs[f], anns, S, cfg.get('area_weight_ref', 0), w_max,
                                            cfg.get('small_area_max', 1000))
             cents.append(cs)
-        Wh = torch.from_numpy(W).pin_memory()  # host memory: at 1536 the GPU is nearly full already
+        # host memory: at 1536 the GPU is nearly full already. Pinning can fail when RAM is busy
+        # (B2 fold 0 crashed that way); unpinned memory only makes the copy a little slower.
+        Wh = torch.from_numpy(W)
+        try:
+            Wh = Wh.pin_memory()
+        except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)) as e:
+            print(json.dumps(dict(event='warning', fold=fold, message=f'weight map not pinned: {e}'[:200])), flush=True)
         cen = torch.full((len(tr), max(1, max(map(len, cents))), 2), float('nan'))
         for i, cs in enumerate(cents):
             if cs:

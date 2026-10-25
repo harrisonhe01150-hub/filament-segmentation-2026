@@ -30,7 +30,7 @@
     "src/make_submission.py": "e14aabedc3bc9b7561cf3bc0b23a520686c668830d73fc8432bc9f3cff6a465c",
     "src/postproc.py": "5adbc3ec075622a263fed64d20207399ec35936e33a469119c651ed10fa374ac",
     "src/predict.py": "f99e2284aa61a59edd3468050a2440847c98728454cd7b1b49521532c3dc107c",
-    "src/train_seg.py": "9e18ada0bf60edf58e7a934dda9114fd1d6c88f83a51f0916c8cfa6cdb3f3f0f",
+    "src/train_seg.py": "e40534f841d20174886f4e890714963c7734e39e2b4107285247863241b01aad",
     "tests/test_cpu_portability.py": "0d4603367c278d60c162c8e178bcbe8e6e641d24533497d868dd19271be74ce8",
     "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a",
     "tests/test_small_filament_sampling.py": "b5b55324be2615e927b08bbd8e6138cd2ac37a4e090d3182c6896d254c5550d3"
