@@ -28,7 +28,7 @@
     "src/make_submission.py": "e14aabedc3bc9b7561cf3bc0b23a520686c668830d73fc8432bc9f3cff6a465c",
     "src/postproc.py": "5adbc3ec075622a263fed64d20207399ec35936e33a469119c651ed10fa374ac",
     "src/predict.py": "1dba11123dde214e3e9be555691e966d68dc4e52aa1b1da4a3a1c1e92eec3a7d",
-    "src/train_seg.py": "5009d1b494ddfe23de3ea42b7b561305f4e6b41bb0149d4faf35ec8f2287d971",
+    "src/train_seg.py": "0abf09815b6b8438f2b705038100790530d2f446970f9ef300e3a7b644b55d75",
     "tests/test_cpu_portability.py": "0d4603367c278d60c162c8e178bcbe8e6e641d24533497d868dd19271be74ce8",
     "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a"
   }

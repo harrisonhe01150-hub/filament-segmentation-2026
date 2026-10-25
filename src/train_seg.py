@@ -181,6 +181,10 @@ def predict(model, imgs, tta, bs=4, fp16=True):
     dev = next(model.parameters()).device
     amp = (torch.autocast('cuda', dtype=torch.float16) if dev.type == 'cuda' and fp16
            else contextlib.nullcontext())
+    if dev.type == 'cuda' and not fp16:
+        # real float32: recent GPUs otherwise run float32 convolutions in TF32 (10-bit mantissa)
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.allow_tf32 = False
     with torch.inference_mode(), amp:
         for i in range(0, len(imgs), bs):
             x = torch.from_numpy(imgs[i:i + bs]).to(dev).float().div(255).unsqueeze(1)
