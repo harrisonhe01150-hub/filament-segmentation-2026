@@ -206,18 +206,24 @@ def pick_device(name=None):
     return torch.device('cpu')
 
 
-def predict(model, imgs, tta, bs=4):
+def predict(model, imgs, tta, bs=4, fp16=True):
     """imgs: uint8 (N,S,S) numpy -> uint8 probability maps (N,S,S).
 
-    Runs on the model's device. CUDA uses float16 autocast (as in training); MPS and CPU run in
-    float32, so their maps can differ from CUDA by rounding.
+    Runs on the model's device. On CUDA, fp16=True uses float16 autocast as in training; MPS and CPU
+    always run in float32. Use fp16=False for maps that agree across devices (CPU vs a float16 GPU
+    run moved a few borderline filaments in or out of a 1255-filament CSV).
     """
     import contextlib
     import torch
     out = np.zeros(imgs.shape, np.uint8)
     model.eval()
     dev = next(model.parameters()).device
-    amp = torch.autocast('cuda', dtype=torch.float16) if dev.type == 'cuda' else contextlib.nullcontext()
+    amp = (torch.autocast('cuda', dtype=torch.float16) if dev.type == 'cuda' and fp16
+           else contextlib.nullcontext())
+    if dev.type == 'cuda' and not fp16:
+        # real float32: recent GPUs otherwise run float32 convolutions in TF32 (10-bit mantissa)
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.allow_tf32 = False
     with torch.inference_mode(), amp:
         for i in range(0, len(imgs), bs):
             x = torch.from_numpy(imgs[i:i + bs]).to(dev).float().div(255).unsqueeze(1)

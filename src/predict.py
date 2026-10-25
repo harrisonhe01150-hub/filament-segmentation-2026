@@ -2,9 +2,10 @@
 
 Loads every weights/model_f*.pt (or --folds), runs each on the test images with the same 8-way
 TTA as training, averages the fold maps at 2048 and applies the v2 post-processing, then checks
-that no two masks of an image overlap. Runs on CUDA, Apple MPS or CPU.
+that no two masks of an image overlap. Runs on CUDA, Apple MPS or CPU. Use --fp32 for the final
+submission so other machines reproduce it (float16 is only used on CUDA and is faster).
 
-  python src/predict.py --weights weights --config configs/v2.json --out outputs/submission.csv
+  python src/predict.py --weights weights --config configs/v2.json --fp32 --out outputs/submission.csv
 """
 import argparse
 import json
@@ -39,6 +40,7 @@ def main():
     p.add_argument('--config', type=Path, required=True, help='training config used for the weights (encoder, size, tta)')
     p.add_argument('--images', type=Path, default=TEST_IMAGES)
     p.add_argument('--device', help='cuda, mps or cpu (default: best available)')
+    p.add_argument('--fp32', action='store_true', help='float32 on CUDA too, so results match other devices')
     p.add_argument('--post', help='JSON overriding the post-processing settings')
     p.add_argument('--out', type=Path, required=True)
     a = p.parse_args()
@@ -63,7 +65,7 @@ def main():
     stacks = []
     for path in paths:
         model = load_model(path, cfg['encoder'], device)
-        stacks.append(predict(model, imgs, cfg['tta']))
+        stacks.append(predict(model, imgs, cfg['tta'], fp16=not a.fp32))
         print(json.dumps(dict(event='fold_predicted', weights=str(path), secs=round(time.time() - t0))), flush=True)
         del model
     rows, empty = build_rows(files, stacks, post)
@@ -71,7 +73,7 @@ def main():
     a.out.parent.mkdir(parents=True, exist_ok=True)
     write_csv(rows, a.out)
     print(json.dumps(dict(rows=len(rows), images=len(files), images_checked_disjoint=checked,
-                          empty_images=empty, device=str(device), folds=[str(x) for x in paths],
+                          empty_images=empty, device=str(device), fp32=a.fp32, folds=[str(x) for x in paths],
                           post=post, secs=round(time.time() - t0))), flush=True)
 
 
