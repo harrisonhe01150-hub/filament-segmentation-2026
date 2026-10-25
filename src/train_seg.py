@@ -1,9 +1,10 @@
 """Solar filament semantic segmentation (soft multi-annotator targets) for Kaggle GPU.
 
-Pipeline: full-disk 2048 -> 1024 grayscale, U-Net (ImageNet encoder), soft target = mean of
-annotator masks, BCE + soft Dice, GPU-side augmentation. Per fold, saves the final-epoch
-weights plus 8-way dihedral TTA probability maps for the held-out fold and the test set.
-Instances are derived later (connected components + tuned post-processing).
+Pipeline: full-disk 2048 -> `size` grayscale (1536 for v2, see configs/), U-Net (ImageNet
+encoder), soft target = mean of annotator masks, BCE + soft Dice, GPU-side augmentation. Per
+fold, saves the final-epoch weights plus 8-way dihedral TTA probability maps for the held-out
+fold and the test set. Instances are derived later (connected components + tuned
+post-processing). To predict from saved weights without training, use predict.py.
 """
 import argparse
 import hashlib
@@ -154,14 +155,39 @@ def undihedral(x, k):
     return x
 
 
-def predict(model, imgs, tta, bs=4):
-    """imgs: uint8 (N,S,S) numpy -> uint8 probability maps (N,S,S)."""
+def pick_device(name=None):
+    """Explicit device name, else CUDA, else Apple MPS, else CPU."""
+    import torch
+    if name:
+        return torch.device(name)
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    if torch.backends.mps.is_available():
+        return torch.device('mps')
+    return torch.device('cpu')
+
+
+def predict(model, imgs, tta, bs=4, fp16=True):
+    """imgs: uint8 (N,S,S) numpy -> uint8 probability maps (N,S,S).
+
+    Runs on the model's device. On CUDA, fp16=True uses float16 autocast as in training; MPS and CPU
+    always run in float32. Use fp16=False for maps that agree across devices (CPU vs a float16 GPU
+    run moved a few borderline filaments in or out of a 1255-filament CSV).
+    """
+    import contextlib
     import torch
     out = np.zeros(imgs.shape, np.uint8)
     model.eval()
-    with torch.inference_mode(), torch.autocast('cuda', dtype=torch.float16):
+    dev = next(model.parameters()).device
+    amp = (torch.autocast('cuda', dtype=torch.float16) if dev.type == 'cuda' and fp16
+           else contextlib.nullcontext())
+    if dev.type == 'cuda' and not fp16:
+        # real float32: recent GPUs otherwise run float32 convolutions in TF32 (10-bit mantissa)
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.allow_tf32 = False
+    with torch.inference_mode(), amp:
         for i in range(0, len(imgs), bs):
-            x = torch.from_numpy(imgs[i:i + bs]).cuda().float().div(255).unsqueeze(1)
+            x = torch.from_numpy(imgs[i:i + bs]).to(dev).float().div(255).unsqueeze(1)
             acc = torch.zeros_like(x)
             for k in range(tta):
                 acc += undihedral(model(to_input(dihedral(x, k))).float().sigmoid(), k)
