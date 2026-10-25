@@ -22,7 +22,12 @@ about 70 s per epoch at batch 4) and about 1.7 hours on a Kaggle T4. Prediction 
 **TBD** fold models and 8-way test-time augmentation: **TBD** s on the RTX 5070 Ti; on a CPU, about 16 s per
 image per fold model.
 
-**Determinism.** Prediction is deterministic on a given device: reloading the saved weights on the training GPU
+**Determinism.** The submitted CSV is produced in float32 on every device (`--fp32`). Regenerating the team's
+earlier two-fold submission from its weights on a CPU (float32) instead of the original float16 GPU run
+reproduced 1252 of 1255 filaments with mean IoU 0.99965 (minimum 0.9935); 3 borderline filaments dropped out
+and 1 appeared, which is why float32 is used for the final run. The frozen probability maps reproduce that
+submission's CSV exactly, and the five-fold out-of-fold PQ re-scores to the recorded 0.4409. Prediction is
+deterministic on a given device: reloading the saved weights on the training GPU
 reproduces the probability maps produced during training bit for bit. Across devices, CPU (float32) and GPU (float16
 autocast) probability maps differ by at most 1/255 per pixel; the resulting masks agree with IoU 0.9996 at the 0.4
 threshold. A clean-clone run on a different machine (Apple MPS) is accepted when every mask matches the submitted

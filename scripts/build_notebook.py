@@ -36,6 +36,7 @@ TEST_IMAGES = ROOT / 'data' / 'MAGFiLO_1.0_Kaggle_2026' / 'test' / 'test_images'
 OUT = ROOT / 'outputs' / 'submission.csv'
 DEVICE = os.environ.get('FILAMENT_DEVICE')         # None: CUDA if available, else Apple MPS, else CPU
 LIMIT = int(os.environ.get('FILAMENT_LIMIT', 0)) or None   # predict only the first N images (quick check)
+FP32 = True                                        # float32 on every device, so any machine reproduces the CSV
 RUN_TRAINING = False                               # True: retrain all folds first (CUDA GPU, ~1 h per fold)"""
 
 ENV = """from importlib.metadata import version
@@ -74,7 +75,7 @@ imgs = np.stack([read_gray(TEST_IMAGES / f, cfg['size']) for f in files])
 stacks = []
 for path in paths:
     model = load_model(path, cfg['encoder'], device)
-    stacks.append(predict(model, imgs, cfg['tta']))
+    stacks.append(predict(model, imgs, cfg['tta'], fp16=not FP32))
     del model
 seconds = time.time() - t0
 print(f'{len(paths)} fold models x {cfg["tta"]} TTA views on {len(files)} images: {seconds:.0f} s '
