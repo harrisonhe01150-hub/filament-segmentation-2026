@@ -19,10 +19,12 @@ CSV is produced from exactly these files.
 
 **Hardware and run time.** Training: one fold of 50 epochs takes about one hour on a single RTX 5070 Ti (16 GB;
 about 70 s per epoch at batch 4) and about 1.7 hours on a Kaggle T4. Prediction for all 180 test images with
-**TBD** fold models and 8-way test-time augmentation: **TBD** s on the RTX 5070 Ti; on a CPU, about 16 s per
-image per fold model.
+8-way test-time augmentation in float32 on the RTX 5070 Ti: 271 s with 2 fold models, 617 s with 5 (about 3.4 s
+per image); float16 is faster (156 s for 2 folds). On a CPU: about 13–16 s per image per fold model.
 
-**Determinism.** The submitted CSV is produced in float32 on every device (`--fp32`). Regenerating the team's
+**Determinism.** The submitted CSV is produced in true float32 on every device (`--fp32`, which also disables
+TF32 on the GPU): the GPU and the CPU then give identical masks (all 1253 filaments of the v2 two-fold
+prediction, IoU 1.0). Regenerating the team's
 earlier two-fold submission from its weights on a CPU (float32) instead of the original float16 GPU run
 reproduced 1252 of 1255 filaments with mean IoU 0.99965 (minimum 0.9935); 3 borderline filaments dropped out
 and 1 appeared, which is why float32 is used for the final run. The frozen probability maps reproduce that
