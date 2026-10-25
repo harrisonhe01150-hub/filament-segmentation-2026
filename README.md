@@ -79,7 +79,7 @@ Train (CUDA only), then predict from saved weights (CUDA, MPS or CPU):
 
 ```bash
 python src/train_seg.py --config configs/v2.json --out runs/v2
-python src/predict.py --weights runs/v2 --config configs/v2.json --out outputs/submission.csv
+python src/predict.py --weights runs/v2 --config configs/v2.json --fp32 --out outputs/submission.csv
 ```
 
 ## Rules worth remembering
