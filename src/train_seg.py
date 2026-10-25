@@ -22,6 +22,10 @@ import numpy as np
 CFG = dict(
     encoder='efficientnet-b4', size=1024, crop=768, epochs=40, batch=6, lr=4e-4, wd=1e-4,
     warmup=150, folds_to_run=[0, 1], n_folds=5, seed=2026, tta=8, run_name='seg_v1',
+    # Experiment B (TEAM_ROLES.md), both off by default so the baseline is unchanged:
+    # small_crop_p = share of training crops centred on a filament smaller than small_area_max px;
+    # area_weight_ref > 0 weights each filament's pixels in the BCE by clip(sqrt(ref / area), 1, max).
+    small_crop_p=0.0, small_area_max=1000, area_weight_ref=0, area_weight_max=4.0,
 )
 COMP = 'filament-segmentation-2026'
 
@@ -79,6 +83,34 @@ def soft_target(recs_of_file, anns, size):
     return cv2.resize(acc, (size, size), interpolation=cv2.INTER_AREA)
 
 
+def small_filament_maps(recs_of_file, anns, size, area_ref, w_max, small_max):
+    """Experiment B inputs for one image, from every annotator's filament masks at 2048.
+
+    Returns (extra, centres). extra: per-pixel BCE weight minus 1 at `size`, uint8 where 255 means
+    w_max - 1; a filament's weight is clip(sqrt(area_ref / area), 1, w_max), overlaps take the larger,
+    background stays 0 (area_ref=0 gives all zeros). centres: normalized (x, y) in [-1, 1] of every
+    filament smaller than small_max px.
+    """
+    import cv2
+    from pycocotools import mask as mu
+    extra = np.zeros((2048, 2048), np.float32)
+    centres = []
+    for r in recs_of_file:
+        for seg in anns[r]:
+            m = mu.decode(mu.merge(mu.frPyObjects(seg, 2048, 2048))).astype(bool)
+            area = int(m.sum())
+            if area == 0:
+                continue
+            if area_ref:
+                w = min(max(math.sqrt(area_ref / area), 1.0), w_max)
+                np.maximum(extra, (w - 1) * m, out=extra)
+            if area < small_max:
+                ys, xs = np.nonzero(m)
+                centres.append(((xs.mean() + .5) / 1024 - 1, (ys.mean() + .5) / 1024 - 1))
+    extra = cv2.resize(extra, (size, size), interpolation=cv2.INTER_AREA)
+    return (extra * (255 / (w_max - 1))).round().clip(0, 255).astype(np.uint8), centres
+
+
 def read_gray(path, size):
     import cv2
     im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
@@ -107,8 +139,11 @@ def to_input(x):
     return (x.expand(-1, 3, -1, -1) - m) / s
 
 
-def augment(img, tgt, crop, gen):
-    """GPU augmentation. img,tgt: (B,1,S,S) float. Returns cropped (B,1,crop,crop)."""
+def augment(img, tgt, crop, gen, centres=None):
+    """GPU augmentation. img: (B,1,S,S), tgt: (B,C,S,S) float. Returns cropped (B,1,crop,crop), (B,C,crop,crop).
+
+    centres: optional (B,2) normalized crop centres (experiment B); NaN rows keep the random centre.
+    """
     import torch
     import torch.nn.functional as F
     B, _, S, _ = img.shape
@@ -123,6 +158,10 @@ def augment(img, tgt, crop, gen):
     # random crop centre in normalized coords (keep mostly inside the disk region)
     c = crop / S
     off = (torch.rand(B, 2, device=dev, generator=gen) * 2 - 1) * (1 - c) * .9
+    if centres is not None:
+        # centre these crops on the given filament; clamp so the crop stays inside the image
+        forced = ~torch.isnan(centres[:, 0])
+        off = torch.where(forced[:, None], centres.nan_to_num().clamp(-(1 - c), 1 - c), off)
     theta[:, :, 2] = off
     # build crop grid: sample a crop x crop window, rotated/scaled around a random centre
     base = F.affine_grid(torch.eye(2, 3, device=dev).unsqueeze(0).expand(B, 2, 3) * 1.0,
@@ -209,7 +248,31 @@ def train_fold(fold, cfg, out_dir):
     S = cfg['size']
     X = np.stack([read_gray(root / 'train/train_images' / f, S) for f in tr])
     Y = np.stack([(soft_target(recs[f], anns, S) * 255).round().astype(np.uint8) for f in tr])
-    print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0)), flush=True)
+    exp_b = bool(cfg.get('area_weight_ref', 0) or cfg.get('small_crop_p', 0))
+    extra_info = {}
+    if exp_b:
+        w_max = cfg.get('area_weight_max', 4.0)
+        W = np.zeros((len(tr), S, S), np.uint8)
+        cents = []
+        for i, f in enumerate(tr):
+            W[i], cs = small_filament_maps(recs[f], anns, S, cfg.get('area_weight_ref', 0), w_max,
+                                           cfg.get('small_area_max', 1000))
+            cents.append(cs)
+        # host memory: at 1536 the GPU is nearly full already. Pinning can fail when RAM is busy
+        # (B2 fold 0 crashed that way); unpinned memory only makes the copy a little slower.
+        Wh = torch.from_numpy(W)
+        try:
+            Wh = Wh.pin_memory()
+        except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)) as e:
+            print(json.dumps(dict(event='warning', fold=fold, message=f'weight map not pinned: {e}'[:200])), flush=True)
+        cen = torch.full((len(tr), max(1, max(map(len, cents))), 2), float('nan'))
+        for i, cs in enumerate(cents):
+            if cs:
+                cen[i, :len(cs)] = torch.tensor(cs)
+        ncen = torch.tensor([len(cs) for cs in cents]).cuda()
+        cen = cen.cuda()
+        extra_info = dict(small_filaments=int(ncen.sum()), images_with_small=int((ncen > 0).sum()))
+    print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0, **extra_info)), flush=True)
     torch.manual_seed(cfg['seed'] + fold)
     gen = torch.Generator(device='cuda').manual_seed(cfg['seed'] + fold)
     # small inputs fit on the GPU; at 2048 keep the dataset in pinned host memory
@@ -234,15 +297,31 @@ def train_fold(fold, cfg, out_dir):
             ic = idx if on_gpu else idx.cpu()
             img = Xg[ic].cuda(non_blocking=True).float().div(255).unsqueeze(1)
             tgt = Yg[ic].cuda(non_blocking=True).float().div(255).unsqueeze(1)
-            xi, yt = augment(img, tgt, cfg['crop'], gen)
-            lr = cfg['lr'] * min(1, (step + 1) / cfg['warmup']) * 0.5 * (1 + math.cos(math.pi * step / total))
+            wt = None
+            if exp_b:
+                centres = None
+                if cfg.get('small_crop_p', 0) > 0:
+                    n = ncen[idx]
+                    pick = (torch.rand(len(idx), device='cuda', generator=gen) < cfg['small_crop_p']) & (n > 0)
+                    k = (torch.rand(len(idx), device='cuda', generator=gen) * n.clamp(min=1)).long()
+                    chosen = cen[idx, k]
+                    centres = torch.where(pick[:, None], chosen, torch.full_like(chosen, float('nan')))
+                extra = Wh[idx.cpu()].cuda(non_blocking=True).float().unsqueeze(1) * ((w_max - 1) / 255)
+                xi, both = augment(img, torch.cat([tgt, extra], 1), cfg['crop'], gen, centres)
+                yt, wt = both[:, :1], 1 + both[:, 1:]  # padding outside the image gets weight 1
+            else:
+                xi, yt = augment(img, tgt, cfg['crop'], gen)
+            lr =cfg['lr'] * min(1, (step + 1) / cfg['warmup']) * 0.5 * (1 + math.cos(math.pi * step / total))
             for g in opt.param_groups:
                 g['lr'] = lr
             with torch.autocast('cuda', dtype=torch.float16):
                 logit = model(to_input(xi))
             logit = logit.float()
             p = logit.sigmoid()
-            bce = F.binary_cross_entropy_with_logits(logit, yt)
+            if wt is None:
+                bce = F.binary_cross_entropy_with_logits(logit, yt)
+            else:  # weighted mean keeps the loss on the same scale as the baseline
+                bce = (F.binary_cross_entropy_with_logits(logit, yt, reduction='none') * wt).sum() / wt.sum()
             dice = 1 - (2 * (p * yt).sum() + 1) / (p.sum() + yt.sum() + 1)
             loss = bce + dice
             opt.zero_grad(set_to_none=True)

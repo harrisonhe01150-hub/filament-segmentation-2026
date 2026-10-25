@@ -1,9 +1,16 @@
 {
   "hash_mode": "SHA256 after CRLF-to-LF normalization",
   "sha256": {
+    "analysis/compare_csv.py": "d17d0c237dde87801feedff3851c1518b9365460f9c385a7734d7c6576f781ea",
     "analysis/official_pq_check.py": "8603ee1e19bc5a64ce90050f702009e872c86eb24aa45c849938f1ad786ff56b",
+    "analysis/recall_by_size.py": "11e7c03be57e995e5f48c4f74d481a0250f4993b710160c7da461483a1eab42d",
     "analysis/score_folds.py": "9aa96d9e5a83260718edc4fcbca3796d95e401d3df508d48d617067de4039ff1",
+    "analysis/shape_variants.py": "ce54d6d350fe55c94d0f629075a8b05921bb6a6a01f6d68948a72e5518474923",
     "analysis/verify_full_oof.py": "33036deb119343cbb80373918aedb72644145f747f0c84e774217c335ac6b24b",
+    "configs/B1.json": "d276c2f5ee3e9d3272826ab6eabd9f7217b69c5fb529f3a5fd8b711b8ec68515",
+    "configs/B1b.json": "c47486734d68208b627f0b1ade4531954ce83198a42f07c86f811d4f756ac620",
+    "configs/B2.json": "f0147f4cebd502be14b38483a06ca952b5fced28db4d5b0e33e246de2e600d03",
+    "configs/B3.json": "f0240d1d01909e9252778805d7d46e80d39df259f4e4ccdde8e46079fbc0dbfa",
     "configs/v2.json": "eb4b53e1563337ef0ef3179076d98208a8dbede027f813c4daded501e5e67ae7",
     "configs/v2b.json": "80dddf53095c78d9a2d2e2e069d45ff252fdce0b26dc6d790e727d59d4b36365",
     "docs/BASELINE_AND_PROVENANCE.txt": "d805cf44f31e83710b312f09238409dc73884a7e267ddd9f8443b9a663e33690",
@@ -16,6 +23,7 @@
     "results/evidence/OUTPUT_REPRODUCTION.json": "3d689d62eb37833f28ffa02b437a04a837998a73e3c2d18bb8ad802b68818f16",
     "results/evidence/crop_inference_01/SUMMARY.json": "c4cf23435046e27b80b4d710802171e245de9cacc4eabee41d65efc646e5f1af",
     "results/evidence/decoupled_grouping_cpu_01/SUMMARY.json": "821514b60485b417a1feecf27e51dbc995c4504b02b15a490f865380d1228d71",
+    "results/evidence/exp_b_5070ti/SUMMARY.json": "fb11ec1f244068af9bbe1a805648a63e213350bfb8c92372df49826c1a0a9444",
     "results/evidence/full_v2_oof/SUMMARY.json": "5531c81bb00d12d543963e43ea8e5e9d2ac55499e9f01a15fa76bb021741e046",
     "results/evidence/softlabel_dice_01/SUMMARY.json": "49b0015d4c40c639a53d93c20e38862b64eaae3ad32782a795eea46435681d7c",
     "results/evidence/softlabel_half_blend_01/SUMMARY.json": "fc79b9982c8224035e1dd01755790b4700409bbf208b4def80527ca8f9f76492",
@@ -28,8 +36,9 @@
     "src/make_submission.py": "e14aabedc3bc9b7561cf3bc0b23a520686c668830d73fc8432bc9f3cff6a465c",
     "src/postproc.py": "5adbc3ec075622a263fed64d20207399ec35936e33a469119c651ed10fa374ac",
     "src/predict.py": "1dba11123dde214e3e9be555691e966d68dc4e52aa1b1da4a3a1c1e92eec3a7d",
-    "src/train_seg.py": "0abf09815b6b8438f2b705038100790530d2f446970f9ef300e3a7b644b55d75",
+    "src/train_seg.py": "09bb88296983be54997794256ec6f38a00719e6578d63a2009bab3410b61e2f0",
     "tests/test_cpu_portability.py": "0d4603367c278d60c162c8e178bcbe8e6e641d24533497d868dd19271be74ce8",
-    "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a"
+    "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a",
+    "tests/test_small_filament_sampling.py": "b5b55324be2615e927b08bbd8e6138cd2ac37a4e090d3182c6896d254c5550d3"
   }
 }
