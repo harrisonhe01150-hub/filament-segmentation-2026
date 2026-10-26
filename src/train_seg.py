@@ -26,6 +26,8 @@ CFG = dict(
     # small_crop_p = share of training crops centred on a filament smaller than small_area_max px;
     # area_weight_ref > 0 weights each filament's pixels in the BCE by clip(sqrt(ref / area), 1, max).
     small_crop_p=0.0, small_area_max=1000, area_weight_ref=0, area_weight_max=4.0,
+    # Experiment A: segmentation-derived auxiliary centerline, off for the v2 control.
+    centerline_weight=0.0, centerline_radius=1, predict_test=True,
 )
 COMP = 'filament-segmentation-2026'
 
@@ -119,10 +121,10 @@ def read_gray(path, size):
     return cv2.resize(im, (size, size), interpolation=cv2.INTER_AREA)
 
 
-def build_model(encoder, weights='imagenet'):
+def build_model(encoder, weights='imagenet', classes=1):
     import segmentation_models_pytorch as smp
     try:
-        return smp.Unet(encoder, encoder_weights=weights, in_channels=3, classes=1)
+        return smp.Unet(encoder, encoder_weights=weights, in_channels=3, classes=classes)
     except Exception as e:
         raise RuntimeError(f'Cannot load requested encoder {encoder}; no fallback was trained') from e
 
@@ -229,7 +231,8 @@ def predict(model, imgs, tta, bs=4, fp16=True):
             x = torch.from_numpy(imgs[i:i + bs]).to(dev).float().div(255).unsqueeze(1)
             acc = torch.zeros_like(x)
             for k in range(tta):
-                acc += undihedral(model(to_input(dihedral(x, k))).float().sigmoid(), k)
+                # Channel zero is always the mask; the auxiliary head is training-only.
+                acc += undihedral(model(to_input(dihedral(x, k)))[:, :1].float().sigmoid(), k)
             out[i:i + bs] = (acc / tta * 255).round().clamp(0, 255).byte().cpu().numpy()[:, 0]
     return out
 
@@ -238,18 +241,33 @@ def train_fold(fold, cfg, out_dir):
     import torch
     import torch.nn.functional as F
     t0 = time.time()
+    aux_weight = float(cfg.get('centerline_weight', 0))
+    if not math.isfinite(aux_weight) or aux_weight < 0:
+        raise ValueError('centerline_weight must be finite and nonnegative')
+    exp_b = bool(cfg.get('area_weight_ref', 0) or cfg.get('small_crop_p', 0))
+    if aux_weight and exp_b:
+        raise ValueError('A1 must be tested without experiment B options')
     root = find_root()
     recs, anns = load_annotations(root)
     files = sorted(recs)
     folds = fold_of_files(files, cfg['n_folds'], cfg['seed'])
     tr = [f for f in files if folds[f] != fold] if fold >= 0 else files
     va = [f for f in files if folds[f] == fold] if fold >= 0 else []
-    test_files = sorted(p.name for p in (root / 'test/test_images').glob('*.jpeg'))
+    test_files = (sorted(p.name for p in (root / 'test/test_images').glob('*.jpeg'))
+                  if cfg.get('predict_test', True) else [])
     S = cfg['size']
     X = np.stack([read_gray(root / 'train/train_images' / f, S) for f in tr])
     Y = np.stack([(soft_target(recs[f], anns, S) * 255).round().astype(np.uint8) for f in tr])
-    exp_b = bool(cfg.get('area_weight_ref', 0) or cfg.get('small_crop_p', 0))
     extra_info = {}
+    if aux_weight:
+        from centerline import centerline_target
+        Z = np.stack([(centerline_target(recs[f], anns, S, cfg.get('centerline_radius', 1)) * 255)
+                      .round().astype(np.uint8) for f in tr])
+        # Keep the additional full-image target bank on the host to preserve T4 headroom.
+        Zh = torch.from_numpy(Z)
+        extra_info = dict(auxiliary_target='segmentation_derived_centerline',
+                          human_spine_used=False, centerline_weight=aux_weight,
+                          auxiliary_positive_pixels=int(np.count_nonzero(Z)))
     if exp_b:
         w_max = cfg.get('area_weight_max', 4.0)
         W = np.zeros((len(tr), S, S), np.uint8)
@@ -279,7 +297,7 @@ def train_fold(fold, cfg, out_dir):
     on_gpu = S <= 1536
     Xg = torch.from_numpy(X).cuda() if on_gpu else torch.from_numpy(X).pin_memory()
     Yg = torch.from_numpy(Y).cuda() if on_gpu else torch.from_numpy(Y).pin_memory()
-    model = build_model(cfg['encoder']).cuda()
+    model = build_model(cfg['encoder'], classes=2 if aux_weight else 1).cuda()
     opt = torch.optim.AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['wd'])
     scaler = torch.amp.GradScaler('cuda')
     steps_per_epoch = math.ceil(len(tr) / cfg['batch'])
@@ -290,6 +308,7 @@ def train_fold(fold, cfg, out_dir):
         model.train()
         perm = torch.randperm(len(tr), device='cuda', generator=gen)
         losses = []
+        mask_losses, auxiliary_losses = [], []
         for i in range(steps_per_epoch):
             idx = perm[i * cfg['batch']:(i + 1) * cfg['batch']]
             if len(idx) < 2:
@@ -298,7 +317,12 @@ def train_fold(fold, cfg, out_dir):
             img = Xg[ic].cuda(non_blocking=True).float().div(255).unsqueeze(1)
             tgt = Yg[ic].cuda(non_blocking=True).float().div(255).unsqueeze(1)
             wt = None
-            if exp_b:
+            auxiliary_target = None
+            if aux_weight:
+                z = Zh[idx.cpu()].cuda().float().div(255).unsqueeze(1)
+                xi, both = augment(img, torch.cat([tgt, z], 1), cfg['crop'], gen)
+                yt, auxiliary_target = both[:, :1], both[:, 1:2]
+            elif exp_b:
                 centres = None
                 if cfg.get('small_crop_p', 0) > 0:
                     n = ncen[idx]
@@ -315,8 +339,8 @@ def train_fold(fold, cfg, out_dir):
             for g in opt.param_groups:
                 g['lr'] = lr
             with torch.autocast('cuda', dtype=torch.float16):
-                logit = model(to_input(xi))
-            logit = logit.float()
+                all_logits = model(to_input(xi))
+            logit = all_logits[:, :1].float()
             p = logit.sigmoid()
             if wt is None:
                 bce = F.binary_cross_entropy_with_logits(logit, yt)
@@ -324,6 +348,12 @@ def train_fold(fold, cfg, out_dir):
                 bce = (F.binary_cross_entropy_with_logits(logit, yt, reduction='none') * wt).sum() / wt.sum()
             dice = 1 - (2 * (p * yt).sum() + 1) / (p.sum() + yt.sum() + 1)
             loss = bce + dice
+            if aux_weight:
+                from centerline import centerline_loss
+                auxiliary = centerline_loss(all_logits[:, 1:2].float(), auxiliary_target)
+                mask_losses.append(float(loss.detach()))
+                auxiliary_losses.append(float(auxiliary.detach()))
+                loss = loss + aux_weight * auxiliary
             opt.zero_grad(set_to_none=True)
             scaler.scale(loss).backward()
             scaler.unscale_(opt)
@@ -332,10 +362,15 @@ def train_fold(fold, cfg, out_dir):
             scaler.update()
             step += 1
             losses.append(float(loss))
-        row = dict(event='epoch', fold=fold, epoch=ep + 1, loss=float(np.mean(losses)), lr=lr, secs=time.time() - t0)
+        row = dict(event='epoch', fold=fold, epoch=ep + 1, loss=float(np.mean(losses)), lr=lr,
+                   secs=time.time() - t0, steps=step)
+        if aux_weight:
+            row.update(mask_loss=float(np.mean(mask_losses)), centerline_loss=float(np.mean(auxiliary_losses)))
         log.append(row)
         print(json.dumps(row), flush=True)
     del Xg, Yg
+    if aux_weight:
+        del Zh, Z
     torch.cuda.empty_cache()
     torch.save(model.state_dict(), out_dir / f'model_f{fold}.pt')
     res = {}
@@ -343,9 +378,10 @@ def train_fold(fold, cfg, out_dir):
         Xv = np.stack([read_gray(root / 'train/train_images' / f, S) for f in va])
         res['val_files'] = np.array(va)
         res['val_prob'] = predict(model, Xv, cfg['tta'])
-    Xt = np.stack([read_gray(root / 'test/test_images' / f, S) for f in test_files])
-    res['test_files'] = np.array(test_files)
-    res['test_prob'] = predict(model, Xt, cfg['tta'])
+    if test_files:
+        Xt = np.stack([read_gray(root / 'test/test_images' / f, S) for f in test_files])
+        res['test_files'] = np.array(test_files)
+        res['test_prob'] = predict(model, Xt, cfg['tta'])
     np.savez_compressed(out_dir / f'probs_f{fold}.npz', **res)
     (out_dir / f'log_f{fold}.json').write_text(json.dumps(dict(cfg=cfg, log=log, secs=time.time() - t0)))
     print(json.dumps(dict(event='fold_done', fold=fold, secs=time.time() - t0)), flush=True)
