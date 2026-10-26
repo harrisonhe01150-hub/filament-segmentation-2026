@@ -293,10 +293,14 @@ def train_fold(fold, cfg, out_dir):
     print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0, **extra_info)), flush=True)
     torch.manual_seed(cfg['seed'] + fold)
     gen = torch.Generator(device='cuda').manual_seed(cfg['seed'] + fold)
-    # small inputs fit on the GPU; at 2048 keep the dataset in pinned host memory
-    on_gpu = S <= 1536
-    Xg = torch.from_numpy(X).cuda() if on_gpu else torch.from_numpy(X).pin_memory()
-    Yg = torch.from_numpy(Y).cuda() if on_gpu else torch.from_numpy(Y).pin_memory()
+    # A1 backward needs the space occupied by the v2 full-dataset GPU cache.
+    # Host uint8 storage preserves the batch, precision, sample order and objective.
+    on_gpu = S <= 1536 and not aux_weight
+    Xg, Yg = torch.from_numpy(X), torch.from_numpy(Y)
+    if on_gpu:
+        Xg, Yg = Xg.cuda(), Yg.cuda()
+    elif not aux_weight:
+        Xg, Yg = Xg.pin_memory(), Yg.pin_memory()
     model = build_model(cfg['encoder'], classes=2 if aux_weight else 1).cuda()
     opt = torch.optim.AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['wd'])
     scaler = torch.amp.GradScaler('cuda')

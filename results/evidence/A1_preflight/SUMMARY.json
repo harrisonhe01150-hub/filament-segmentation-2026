@@ -1,5 +1,5 @@
 {
-  "status": "CPU_CHECKED_NOT_GPU_TRAINED",
+  "status": "CPU_CHECKED_GPU_V1_OOM_REPAIR_PENDING",
   "test_centerline": "7 unittest tests passed",
   "real_encoder": "EfficientNet-B4 weights=None; CPU forward, backward, and 1/2-channel checkpoint loading passed",
   "pretrained_weights_downloaded": false,
@@ -78,5 +78,13 @@
   },
   "gpu_memory_verified": false,
   "new_pq": null,
-  "official_score": null
+  "official_score": null,
+  "gpu_v1": {
+    "result": "both folds OOM during backward",
+    "valid_pq": null,
+    "quota_used_hours": 0.08794222222222281,
+    "repair": "move all full-dataset caches to host; batch 4 and objective unchanged",
+    "real_size_gpu_preflight_added": true,
+    "real_size_gpu_preflight_passed": false
+  }
 }
