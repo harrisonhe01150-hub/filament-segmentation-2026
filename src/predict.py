@@ -26,8 +26,11 @@ TEST_IMAGES = Path('data/MAGFiLO_1.0_Kaggle_2026/test/test_images')
 
 def load_model(path, encoder, device):
     import torch
-    model = build_model(encoder, weights=None)  # architecture only; no ImageNet download
     state = torch.load(path, map_location='cpu', weights_only=True)
+    classes = state['segmentation_head.0.weight'].shape[0]
+    if classes not in (1, 2):
+        raise ValueError(f'Expected mask or mask+centerline weights, got {classes} output channels')
+    model = build_model(encoder, weights=None, classes=classes)  # no ImageNet download
     # accept float16 checkpoints (saved that way to stay under GitHub's 100 MB file limit)
     model.load_state_dict({k: v.float() if v.is_floating_point() else v for k, v in state.items()})
     return model.to(device).eval()

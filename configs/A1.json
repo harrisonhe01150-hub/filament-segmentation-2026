@@ -1,0 +1,20 @@
+{
+  "encoder": "efficientnet-b4",
+  "lr": 0.0004,
+  "wd": 0.0001,
+  "warmup": 150,
+  "n_folds": 5,
+  "seed": 2026,
+  "tta": 8,
+  "size": 1536,
+  "crop": 1024,
+  "epochs": 50,
+  "batch": 4,
+  "folds_to_run": [0, 1],
+  "run_name": "A1_mask_centerline",
+  "centerline_weight": 0.25,
+  "centerline_radius": 1,
+  "area_weight_ref": 0,
+  "small_crop_p": 0,
+  "predict_test": false
+}

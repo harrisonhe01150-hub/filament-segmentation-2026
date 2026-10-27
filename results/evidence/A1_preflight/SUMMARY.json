@@ -1,0 +1,90 @@
+{
+  "status": "CPU_CHECKED_GPU_V1_OOM_REPAIR_PENDING",
+  "test_centerline": "7 unittest tests passed",
+  "real_encoder": "EfficientNet-B4 weights=None; CPU forward, backward, and 1/2-channel checkpoint loading passed",
+  "pretrained_weights_downloaded": false,
+  "test_cpu_portability": "passed; see scratch outputs",
+  "test_runtime_guards": {
+    "failed_child_propagates": true,
+    "missing_outputs_rejected": true,
+    "complete_outputs_accepted": true,
+    "no_gpu_rejected_without_launch": true,
+    "encoder_failure_does_not_change_architecture": true
+  },
+  "test_small_filament_sampling": {
+    "small_weight": 2.235,
+    "large_weight": 1.0,
+    "centred_crops_with_blob": "200/200",
+    "random_crops_with_blob": "4/200",
+    "nan_centre_matches_baseline": true,
+    "channels_share_geometry": true
+  },
+  "real_training_target_check": {
+    "training_fold": 0,
+    "only_training_segmentation_used": true,
+    "images_available_locally": false,
+    "samples": [
+      {
+        "file": "20110109104734Ch.jpeg",
+        "held_out_fold": 1,
+        "annotators": 1,
+        "positive_centerline_pixels": 931,
+        "min": 0.0,
+        "max": 1.0,
+        "seconds": 1.0619999999980791
+      },
+      {
+        "file": "20110114105034Ch.jpeg",
+        "held_out_fold": 2,
+        "annotators": 2,
+        "positive_centerline_pixels": 3261,
+        "min": 0.0,
+        "max": 1.0,
+        "seconds": 0.4690000000045984
+      },
+      {
+        "file": "20110119082634Lh.jpeg",
+        "held_out_fold": 1,
+        "annotators": 1,
+        "positive_centerline_pixels": 1683,
+        "min": 0.0,
+        "max": 1.0,
+        "seconds": 0.18699999999807915
+      }
+    ]
+  },
+  "target_visualization_reviewed": true,
+  "baseline_rescore_current_repo": {
+    "fold0": {
+      "pq_rounded": 0.4371,
+      "tp": 1074,
+      "fp": 587,
+      "fn": 573
+    },
+    "fold1": {
+      "pq_rounded": 0.4485,
+      "tp": 1118,
+      "fp": 547,
+      "fn": 609
+    },
+    "combined_pq_rounded": 0.4429,
+    "images": 284,
+    "post": {
+      "t_lo": 0.4,
+      "close": 8,
+      "min_area": 300,
+      "min_mean": 0.85
+    }
+  },
+  "gpu_memory_verified": false,
+  "new_pq": null,
+  "official_score": null,
+  "gpu_v1": {
+    "result": "both folds OOM during backward",
+    "valid_pq": null,
+    "quota_used_hours": 0.08794222222222281,
+    "repair": "move all full-dataset caches to host; batch 4 and objective unchanged",
+    "real_size_gpu_preflight_added": true,
+    "real_size_gpu_preflight_passed": false
+  }
+}
