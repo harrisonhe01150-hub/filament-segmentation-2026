@@ -12,6 +12,8 @@ Optional config keys, all off by default (the defaults reproduce the original v2
   boundary       second output channel trained on filament outlines (experiment C), weight boundary_weight
   data_on_host   keep the training arrays in host memory on CUDA (frees ~1.3 GB per array)
   small_crop_p / area_weight_ref   experiment B, see CFG below
+  pseudo_dir     experiment S1: also train on unlabeled frames with soft pseudo-labels from
+                 scripts/make_pseudo.py (images.npy + probs_f<fold>.npy in that folder)
 """
 import argparse
 import hashlib
@@ -286,6 +288,27 @@ def train_fold(fold, cfg, out_dir):
     S = cfg['size']
     X = np.stack([read_gray(root / 'train/train_images' / f, S) for f in tr])
     Y = np.stack([(soft_target(recs[f], anns, S) * 255).round().astype(np.uint8) for f in tr])
+    n_pseudo = 0
+    if cfg.get('pseudo_dir'):
+        # experiment S1: unlabeled frames after the real ones; their targets come from a teacher that never
+        # saw this fold's validation images. Filled into one preallocated array to keep peak RAM down.
+        pd = Path(cfg['pseudo_dir'])
+        imgs = np.load(pd / 'images.npy', mmap_mode='r')
+        probs = np.load(pd / f'probs_f{fold}.npy', mmap_mode='r')
+        assert imgs.shape == probs.shape and imgs.shape[1:] == (S, S), 'pseudo-labels made at another size'
+        assert not (cfg.get('boundary') or cfg.get('area_weight_ref') or cfg.get('small_crop_p')), \
+            'pseudo-labels have no boundary or filament maps'
+        n_pseudo = len(imgs)
+        for name, real, extra in (('X', X, imgs), ('Y', Y, probs)):
+            both = np.empty((len(real) + n_pseudo, S, S), np.uint8)
+            both[:len(real)] = real
+            both[len(real):] = extra
+            if name == 'X':
+                X = both
+            else:
+                Y = both
+        del imgs, probs
+    n_train = len(X)
     dev = pick_device()
     use_b = bool(cfg.get('boundary'))
     if use_b:
@@ -315,6 +338,8 @@ def train_fold(fold, cfg, out_dir):
         ncen = torch.tensor([len(cs) for cs in cents]).to(dev)
         cen = cen.to(dev)
         extra_info = dict(small_filaments=int(ncen.sum()), images_with_small=int((ncen > 0).sum()))
+    if n_pseudo:
+        extra_info['pseudo'] = n_pseudo
     print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0, **extra_info)), flush=True)
     # cfg['seed'] fixes the fold split; train_seed only changes init/order/augmentation, so another seed
     # trains on exactly the same folds and its models can be averaged with the first
@@ -324,19 +349,26 @@ def train_fold(fold, cfg, out_dir):
     # small inputs fit on a CUDA card; at 2048 keep the dataset in pinned host memory. MPS and CPU share
     # host memory, so they always keep it on the device; data_on_host frees CUDA memory on small cards.
     on_gpu = (S <= 1536 or dev.type != 'cuda') and not (cfg.get('data_on_host') and dev.type == 'cuda')
-    store = lambda a: torch.from_numpy(a).to(dev) if on_gpu else torch.from_numpy(a).pin_memory()
+    def store(a):
+        t = torch.from_numpy(a)
+        if on_gpu:
+            return t.to(dev)
+        try:  # pinning can fail when RAM is busy; unpinned only makes the copies a little slower
+            return t.pin_memory()
+        except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)):
+            return t
     Xg, Yg = store(X), store(Y)
     Bg = store(Bt) if use_b else None
     model = build_model(cfg['encoder'], classes=2 if use_b else 1).to(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['wd'])
     scaler = torch.amp.GradScaler(dev.type, enabled=dev.type != 'cpu')
-    steps_per_epoch = math.ceil(len(tr) / cfg['batch'])
+    steps_per_epoch = math.ceil(n_train / cfg["batch"])
     total = steps_per_epoch * cfg['epochs']
     step = 0
     log = []
     for ep in range(cfg['epochs']):
         model.train()
-        perm = torch.randperm(len(tr), device=dev, generator=gen)
+        perm = torch.randperm(n_train, device=dev, generator=gen)
         losses = []
         for i in range(steps_per_epoch):
             idx = perm[i * cfg['batch']:(i + 1) * cfg['batch']]
