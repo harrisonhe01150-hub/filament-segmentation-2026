@@ -310,6 +310,7 @@ def train_fold(fold, cfg, out_dir):
         del imgs, probs
     n_train = len(X)
     dev = pick_device()
+    pin_host = bool(cfg.get('pin_memory', os.name != 'nt'))  # see store() below
     use_b = bool(cfg.get('boundary'))
     if use_b:
         Bt = np.stack([(boundary_target(recs[f], anns, S, cfg.get('boundary_px', 5)) * 255).round().astype(np.uint8)
@@ -327,10 +328,11 @@ def train_fold(fold, cfg, out_dir):
         # host memory: at 1536 the GPU is nearly full already. Pinning can fail when RAM is busy
         # (B2 fold 0 crashed that way); unpinned memory only makes the copy a little slower.
         Wh = torch.from_numpy(W)
-        try:
-            Wh = Wh.pin_memory()
-        except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)) as e:
-            print(json.dumps(dict(event='warning', fold=fold, message=f'weight map not pinned: {e}'[:200])), flush=True)
+        if pin_host:
+            try:
+                Wh = Wh.pin_memory()
+            except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)) as e:
+                print(json.dumps(dict(event='warning', fold=fold, message=f'weight map not pinned: {e}'[:200])), flush=True)
         cen = torch.full((len(tr), max(1, max(map(len, cents))), 2), float('nan'))
         for i, cs in enumerate(cents):
             if cs:
@@ -349,11 +351,16 @@ def train_fold(fold, cfg, out_dir):
     # small inputs fit on a CUDA card; at 2048 keep the dataset in pinned host memory. MPS and CPU share
     # host memory, so they always keep it on the device; data_on_host frees CUDA memory on small cards.
     on_gpu = (S <= 1536 or dev.type != 'cuda') and not (cfg.get('data_on_host') and dev.type == 'cuda')
+    # Pinning gigabytes of host memory can fail when RAM is busy, and on Windows the failed allocation left the
+    # CUDA context unusable: the next kernel launch died with "shared object initialization failed" (two full-data
+    # runs on 10-27). Unpinned copies cost ~2 ms per step here, so Windows skips pinning unless the config asks.
     def store(a):
         t = torch.from_numpy(a)
         if on_gpu:
             return t.to(dev)
-        try:  # pinning can fail when RAM is busy; unpinned only makes the copies a little slower
+        if not pin_host:
+            return t
+        try:
             return t.pin_memory()
         except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)):
             return t
