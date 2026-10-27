@@ -1,0 +1,120 @@
+{
+  "status": "COMPLETED_FIXED_OOF_COMPARISON",
+  "folds": [
+    {
+      "fold": 0,
+      "images": 142,
+      "control": {
+        "pq": 0.4371248681138764,
+        "tp": 1074,
+        "fp": 587,
+        "fn": 573,
+        "matched_iou_sum": 723.0045318603516
+      },
+      "candidate": {
+        "pq": 0.43952984002625684,
+        "tp": 1055,
+        "fp": 535,
+        "fn": 592,
+        "matched_iou_sum": 711.3790460824966
+      },
+      "delta": 0.002404971912380427
+    },
+    {
+      "fold": 1,
+      "images": 142,
+      "control": {
+        "pq": 0.44847753215229735,
+        "tp": 1118,
+        "fp": 547,
+        "fn": 609,
+        "matched_iou_sum": 760.6178945302963
+      },
+      "candidate": {
+        "pq": 0.4423515238749364,
+        "tp": 1114,
+        "fp": 582,
+        "fn": 613,
+        "matched_iou_sum": 757.0846331119537
+      },
+      "delta": -0.006126008277360928
+    }
+  ],
+  "combined": {
+    "control": {
+      "pq": 0.44287236608676056,
+      "tp": 2192,
+      "fp": 1134,
+      "fn": 1182,
+      "matched_iou_sum": 1483.622426390648
+    },
+    "candidate": {
+      "pq": 0.4409800838421773,
+      "tp": 2169,
+      "fp": 1117,
+      "fn": 1205,
+      "matched_iou_sum": 1468.4636791944504
+    }
+  },
+  "delta": -0.0018922822445832654,
+  "control_exactly_reproduced": true,
+  "threshold": 0.005,
+  "both_folds_improved": false,
+  "passes_preregistered_gate": false,
+  "additional_training_started": false,
+  "images": 284,
+  "expert_records": 457,
+  "image_changes": {
+    "better": 142,
+    "worse": 131,
+    "unchanged": 11
+  },
+  "post": {
+    "t_lo": 0.4,
+    "close": 8,
+    "min_area": 300,
+    "min_mean": 0.85
+  },
+  "official_score": null,
+  "test_labels_used": false,
+  "test_predictions": false,
+  "scope": "Previously used research OOF; not an independent test or public leaderboard score",
+  "runtime_seconds": 178.03099999999995,
+  "provenance": {
+    "annotation_sha256": "5da9e92b5a1a1947fd5d57adb6688269625c48ec1ef884daf2a01618c9ed54a1",
+    "source_commit": "b2e510701ecd02529de88a4c4668711601aa0c6a",
+    "source_hashes_verified": true,
+    "models": {
+      "0": "95270baaf386f8673a39fb57bb8da68c7672d16526dbe57902b88b98ebfbf42a",
+      "1": "f8fc8f2c07803077a3d6a8f54cdc5b945c362b9bea95c5f536e114e5172bdf04"
+    },
+    "probabilities": {
+      "control_0": "bc017375629c91eeb66865d7deb3d894673a0e740caa95b1de274c47206ccb39",
+      "candidate_0": "437c09beb9508d5aa552668d90110c682336b39106a9e842c12f11a3bf3b6e2f",
+      "control_1": "e4a0ca15e5bd7e70889fd4e56ea8ed68ef7a9eec388d8448c465e8ee5c30d9ee",
+      "candidate_1": "e52dbfdfe4cc9ee6f5fbe2ed3e325fb61d2caaea7925ead92cf8b5a9b1669cfa"
+    },
+    "fold_checks": [
+      {
+        "fold": 0,
+        "epochs": 50,
+        "updates": 7050,
+        "val_images": 142,
+        "final_loss": 0.431040790909571
+      },
+      {
+        "fold": 1,
+        "epochs": 50,
+        "updates": 7050,
+        "val_images": 142,
+        "final_loss": 0.4257969632216379
+      }
+    ],
+    "scorer_sha256": {
+      "common.py": "521606af0241258746866b028f6fd027c3d7076843ae6c1f28cc2b8cbce5c9d8",
+      "fastsweep.py": "d2275b162e0d22f28e0e82441c4b097c76638234451ccaa5302556e747a5e65c",
+      "postproc.py": "5adbc3ec075622a263fed64d20207399ec35936e33a469119c651ed10fa374ac",
+      "train_seg.py": "3131fb9c856265adb4eb35770a0dad0ef5554902aa3008ac3340a76d1e8d455e"
+    }
+  }
+}
