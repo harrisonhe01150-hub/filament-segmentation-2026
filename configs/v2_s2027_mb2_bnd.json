@@ -1,0 +1,24 @@
+{
+ "encoder": "efficientnet-b4",
+ "lr": 0.0004,
+ "wd": 0.0001,
+ "warmup": 150,
+ "n_folds": 5,
+ "seed": 2026,
+ "tta": 8,
+ "size": 1536,
+ "crop": 1024,
+ "epochs": 50,
+ "batch": 4,
+ "folds_to_run": [
+  0,
+  1
+ ],
+ "run_name": "seg_v2_s2027_mb2_bnd",
+ "train_seed": 2027,
+ "micro_batch": 2,
+ "boundary": true,
+ "boundary_px": 5,
+ "boundary_weight": 0.5,
+ "data_on_host": true
+}

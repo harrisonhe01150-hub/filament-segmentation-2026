@@ -1,10 +1,17 @@
-"""Solar filament semantic segmentation (soft multi-annotator targets) for Kaggle GPU.
+"""Solar filament semantic segmentation (soft multi-annotator targets) for CUDA, Apple MPS or CPU.
 
 Pipeline: full-disk 2048 -> `size` grayscale (1536 for v2, see configs/), U-Net (ImageNet
 encoder), soft target = mean of annotator masks, BCE + soft Dice, GPU-side augmentation. Per
 fold, saves the final-epoch weights plus 8-way dihedral TTA probability maps for the held-out
 fold and the test set. Instances are derived later (connected components + tuned
 post-processing). To predict from saved weights without training, use predict.py.
+
+Optional config keys, all off by default (the defaults reproduce the original v2 runs):
+  train_seed     seed for init/order/augmentation only; `seed` keeps fixing the fold split
+  micro_batch    gradient accumulation: chunks of this size, one optimizer step per `batch`
+  boundary       second output channel trained on filament outlines (experiment C), weight boundary_weight
+  data_on_host   keep the training arrays in host memory on CUDA (frees ~1.3 GB per array)
+  small_crop_p / area_weight_ref   experiment B, see CFG below
 """
 import argparse
 import hashlib
@@ -119,12 +126,34 @@ def read_gray(path, size):
     return cv2.resize(im, (size, size), interpolation=cv2.INTER_AREA)
 
 
-def build_model(encoder, weights='imagenet'):
+def boundary_target(recs_of_file, anns, size, width=5):
+    """Mean over annotators of every filament's own outline (per instance, so touching filaments get a
+    boundary between them that the union mask in soft_target cannot show)."""
+    import cv2
+    from pycocotools import mask as mu
+    kernel = np.ones((width, width), np.uint8)
+    acc = np.zeros((2048, 2048), np.float32)
+    for r in recs_of_file:
+        b = np.zeros((2048, 2048), bool)
+        for seg in anns[r]:
+            m = mu.decode(mu.merge(mu.frPyObjects(seg, 2048, 2048)))
+            b |= cv2.morphologyEx(m, cv2.MORPH_GRADIENT, kernel).astype(bool)
+        acc += b
+    acc /= len(recs_of_file)
+    return cv2.resize(acc, (size, size), interpolation=cv2.INTER_AREA)
+
+
+def build_model(encoder, weights='imagenet', classes=1):
     import segmentation_models_pytorch as smp
     try:
-        return smp.Unet(encoder, encoder_weights=weights, in_channels=3, classes=1)
+        return smp.Unet(encoder, encoder_weights=weights, in_channels=3, classes=classes)
     except Exception as e:
         raise RuntimeError(f'Cannot load requested encoder {encoder}; no fallback was trained') from e
+
+
+def dice_loss(p, y):
+    """Soft Dice over the whole batch."""
+    return 1 - (2 * (p * y).sum() + 1) / (p.sum() + y.sum() + 1)
 
 
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
@@ -206,8 +235,9 @@ def pick_device(name=None):
     return torch.device('cpu')
 
 
-def predict(model, imgs, tta, bs=4, fp16=True):
-    """imgs: uint8 (N,S,S) numpy -> uint8 probability maps (N,S,S).
+def predict(model, imgs, tta, bs=4, fp16=True, all_channels=False):
+    """imgs: uint8 (N,S,S) numpy -> uint8 probability maps (N,S,S) of the first output channel,
+    or (N,C,S,S) of every channel with all_channels=True.
 
     Runs on the model's device. On CUDA, fp16=True uses float16 autocast as in training; MPS and CPU
     always run in float32. Use fp16=False for maps that agree across devices (CPU vs a float16 GPU
@@ -215,7 +245,7 @@ def predict(model, imgs, tta, bs=4, fp16=True):
     """
     import contextlib
     import torch
-    out = np.zeros(imgs.shape, np.uint8)
+    out = None
     model.eval()
     dev = next(model.parameters()).device
     amp = (torch.autocast('cuda', dtype=torch.float16) if dev.type == 'cuda' and fp16
@@ -227,11 +257,19 @@ def predict(model, imgs, tta, bs=4, fp16=True):
     with torch.inference_mode(), amp:
         for i in range(0, len(imgs), bs):
             x = torch.from_numpy(imgs[i:i + bs]).to(dev).float().div(255).unsqueeze(1)
-            acc = torch.zeros_like(x)
+            acc = 0
             for k in range(tta):
-                acc += undihedral(model(to_input(dihedral(x, k))).float().sigmoid(), k)
-            out[i:i + bs] = (acc / tta * 255).round().clamp(0, 255).byte().cpu().numpy()[:, 0]
-    return out
+                acc = acc + undihedral(model(to_input(dihedral(x, k))).float().sigmoid(), k)
+            prob = (acc / tta * 255).round().clamp(0, 255).byte().cpu().numpy()
+            if out is None:
+                out = np.zeros((len(imgs),) + prob.shape[1:], np.uint8)
+            out[i:i + bs] = prob
+    return out if all_channels else out[:, 0]
+
+
+def amp_dtype(dev_type):
+    import torch
+    return torch.bfloat16 if dev_type == 'cpu' else torch.float16  # CPU autocast only supports bfloat16
 
 
 def train_fold(fold, cfg, out_dir):
@@ -248,6 +286,11 @@ def train_fold(fold, cfg, out_dir):
     S = cfg['size']
     X = np.stack([read_gray(root / 'train/train_images' / f, S) for f in tr])
     Y = np.stack([(soft_target(recs[f], anns, S) * 255).round().astype(np.uint8) for f in tr])
+    dev = pick_device()
+    use_b = bool(cfg.get('boundary'))
+    if use_b:
+        Bt = np.stack([(boundary_target(recs[f], anns, S, cfg.get('boundary_px', 5)) * 255).round().astype(np.uint8)
+                       for f in tr])
     exp_b = bool(cfg.get('area_weight_ref', 0) or cfg.get('small_crop_p', 0))
     extra_info = {}
     if exp_b:
@@ -269,83 +312,99 @@ def train_fold(fold, cfg, out_dir):
         for i, cs in enumerate(cents):
             if cs:
                 cen[i, :len(cs)] = torch.tensor(cs)
-        ncen = torch.tensor([len(cs) for cs in cents]).cuda()
-        cen = cen.cuda()
+        ncen = torch.tensor([len(cs) for cs in cents]).to(dev)
+        cen = cen.to(dev)
         extra_info = dict(small_filaments=int(ncen.sum()), images_with_small=int((ncen > 0).sum()))
     print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0, **extra_info)), flush=True)
-    torch.manual_seed(cfg['seed'] + fold)
-    gen = torch.Generator(device='cuda').manual_seed(cfg['seed'] + fold)
-    # small inputs fit on the GPU; at 2048 keep the dataset in pinned host memory
-    on_gpu = S <= 1536
-    Xg = torch.from_numpy(X).cuda() if on_gpu else torch.from_numpy(X).pin_memory()
-    Yg = torch.from_numpy(Y).cuda() if on_gpu else torch.from_numpy(Y).pin_memory()
-    model = build_model(cfg['encoder']).cuda()
+    # cfg['seed'] fixes the fold split; train_seed only changes init/order/augmentation, so another seed
+    # trains on exactly the same folds and its models can be averaged with the first
+    train_seed = cfg.get('train_seed', cfg['seed'])
+    torch.manual_seed(train_seed + fold)
+    gen = torch.Generator(device=dev).manual_seed(train_seed + fold)
+    # small inputs fit on a CUDA card; at 2048 keep the dataset in pinned host memory. MPS and CPU share
+    # host memory, so they always keep it on the device; data_on_host frees CUDA memory on small cards.
+    on_gpu = (S <= 1536 or dev.type != 'cuda') and not (cfg.get('data_on_host') and dev.type == 'cuda')
+    store = lambda a: torch.from_numpy(a).to(dev) if on_gpu else torch.from_numpy(a).pin_memory()
+    Xg, Yg = store(X), store(Y)
+    Bg = store(Bt) if use_b else None
+    model = build_model(cfg['encoder'], classes=2 if use_b else 1).to(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['wd'])
-    scaler = torch.amp.GradScaler('cuda')
+    scaler = torch.amp.GradScaler(dev.type, enabled=dev.type != 'cpu')
     steps_per_epoch = math.ceil(len(tr) / cfg['batch'])
     total = steps_per_epoch * cfg['epochs']
     step = 0
     log = []
     for ep in range(cfg['epochs']):
         model.train()
-        perm = torch.randperm(len(tr), device='cuda', generator=gen)
+        perm = torch.randperm(len(tr), device=dev, generator=gen)
         losses = []
         for i in range(steps_per_epoch):
             idx = perm[i * cfg['batch']:(i + 1) * cfg['batch']]
             if len(idx) < 2:
                 continue
-            ic = idx if on_gpu else idx.cpu()
-            img = Xg[ic].cuda(non_blocking=True).float().div(255).unsqueeze(1)
-            tgt = Yg[ic].cuda(non_blocking=True).float().div(255).unsqueeze(1)
-            wt = None
-            if exp_b:
-                centres = None
-                if cfg.get('small_crop_p', 0) > 0:
-                    n = ncen[idx]
-                    pick = (torch.rand(len(idx), device='cuda', generator=gen) < cfg['small_crop_p']) & (n > 0)
-                    k = (torch.rand(len(idx), device='cuda', generator=gen) * n.clamp(min=1)).long()
-                    chosen = cen[idx, k]
-                    centres = torch.where(pick[:, None], chosen, torch.full_like(chosen, float('nan')))
-                extra = Wh[idx.cpu()].cuda(non_blocking=True).float().unsqueeze(1) * ((w_max - 1) / 255)
-                xi, both = augment(img, torch.cat([tgt, extra], 1), cfg['crop'], gen, centres)
-                yt, wt = both[:, :1], 1 + both[:, 1:]  # padding outside the image gets weight 1
-            else:
-                xi, yt = augment(img, tgt, cfg['crop'], gen)
-            lr =cfg['lr'] * min(1, (step + 1) / cfg['warmup']) * 0.5 * (1 + math.cos(math.pi * step / total))
+            lr = cfg['lr'] * min(1, (step + 1) / cfg['warmup']) * 0.5 * (1 + math.cos(math.pi * step / total))
             for g in opt.param_groups:
                 g['lr'] = lr
-            with torch.autocast('cuda', dtype=torch.float16):
-                logit = model(to_input(xi))
-            logit = logit.float()
-            p = logit.sigmoid()
-            if wt is None:
-                bce = F.binary_cross_entropy_with_logits(logit, yt)
-            else:  # weighted mean keeps the loss on the same scale as the baseline
-                bce = (F.binary_cross_entropy_with_logits(logit, yt, reduction='none') * wt).sum() / wt.sum()
-            dice = 1 - (2 * (p * yt).sum() + 1) / (p.sum() + yt.sum() + 1)
-            loss = bce + dice
             opt.zero_grad(set_to_none=True)
-            scaler.scale(loss).backward()
+            # micro_batch < batch: accumulate gradients over chunks so a small GPU keeps the batch-size
+            # update schedule; BatchNorm and the soft Dice then see one chunk at a time
+            loss = 0.
+            for part in idx.split(cfg.get('micro_batch') or len(idx)):
+                ic = part if on_gpu else part.cpu()
+                img = Xg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1)
+                chans = [Yg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1)]  # mask, [outline], [weight]
+                if use_b:
+                    chans.append(Bg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1))
+                centres = None
+                if exp_b:
+                    if cfg.get('small_crop_p', 0) > 0:
+                        n = ncen[part]
+                        pick = (torch.rand(len(part), device=dev, generator=gen) < cfg['small_crop_p']) & (n > 0)
+                        k = (torch.rand(len(part), device=dev, generator=gen) * n.clamp(min=1)).long()
+                        chosen = cen[part, k]
+                        centres = torch.where(pick[:, None], chosen, torch.full_like(chosen, float('nan')))
+                    chans.append(Wh[part.cpu()].to(dev, non_blocking=True).float().unsqueeze(1) * ((w_max - 1) / 255))
+                xi, both = augment(img, torch.cat(chans, 1), cfg['crop'], gen, centres)
+                yt = both[:, :1]
+                wt = 1 + both[:, -1:] if exp_b else None  # padding outside the image gets weight 1
+                with torch.autocast(dev.type, dtype=amp_dtype(dev.type)):
+                    logit = model(to_input(xi))
+                logit = logit.float()
+                if wt is None:
+                    bce = F.binary_cross_entropy_with_logits(logit[:, :1], yt)
+                else:  # weighted mean keeps the loss on the same scale as the baseline
+                    bce = (F.binary_cross_entropy_with_logits(logit[:, :1], yt, reduction='none') * wt).sum() / wt.sum()
+                part_loss = bce + dice_loss(logit[:, :1].sigmoid(), yt)
+                if use_b:
+                    yb = both[:, 1:2]
+                    part_loss = part_loss + cfg.get('boundary_weight', .5) * (
+                        F.binary_cross_entropy_with_logits(logit[:, 1:], yb) + dice_loss(logit[:, 1:].sigmoid(), yb))
+                part_loss = part_loss * len(part) / len(idx)
+                scaler.scale(part_loss).backward()
+                loss += part_loss.item()
             scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
             scaler.step(opt)
             scaler.update()
             step += 1
-            losses.append(float(loss))
+            losses.append(loss)
         row = dict(event='epoch', fold=fold, epoch=ep + 1, loss=float(np.mean(losses)), lr=lr, secs=time.time() - t0)
         log.append(row)
         print(json.dumps(row), flush=True)
-    del Xg, Yg
-    torch.cuda.empty_cache()
+    del Xg, Yg, Bg
+    if dev.type == 'cuda':
+        torch.cuda.empty_cache()
     torch.save(model.state_dict(), out_dir / f'model_f{fold}.pt')
     res = {}
-    if va:
-        Xv = np.stack([read_gray(root / 'train/train_images' / f, S) for f in va])
-        res['val_files'] = np.array(va)
-        res['val_prob'] = predict(model, Xv, cfg['tta'])
-    Xt = np.stack([read_gray(root / 'test/test_images' / f, S) for f in test_files])
-    res['test_files'] = np.array(test_files)
-    res['test_prob'] = predict(model, Xt, cfg['tta'])
+    for split, names in [('val', va), ('test', test_files)]:
+        if not names:
+            continue
+        sub = 'test/test_images' if split == 'test' else 'train/train_images'
+        prob = predict(model, np.stack([read_gray(root / sub / f, S) for f in names]), cfg['tta'], all_channels=True)
+        res[f'{split}_files'] = np.array(names)
+        res[f'{split}_prob'] = prob[:, 0]
+        if use_b:
+            res[f'{split}_boundary'] = prob[:, 1]
     np.savez_compressed(out_dir / f'probs_f{fold}.npz', **res)
     (out_dir / f'log_f{fold}.json').write_text(json.dumps(dict(cfg=cfg, log=log, secs=time.time() - t0)))
     print(json.dumps(dict(event='fold_done', fold=fold, secs=time.time() - t0)), flush=True)
@@ -369,7 +428,8 @@ def main():
     import torch
     ngpu = torch.cuda.device_count()
     if ngpu == 0:
-        raise RuntimeError('CUDA GPU required; no fold was started')
+        raise RuntimeError('CUDA GPU required for the multi-fold launcher; no fold was started '
+                           '(on Apple MPS or CPU run one fold at a time with --fold N)')
     print(json.dumps(dict(event='start', gpus=ngpu, cfg=CFG, torch=torch.__version__)), flush=True)
     pending = list(CFG['folds_to_run'])
     if not pending or len(pending) != len(set(pending)):
