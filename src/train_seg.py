@@ -439,7 +439,7 @@ def train_fold(fold, cfg, out_dir):
         if not names:
             continue
         sub = 'test/test_images' if split == 'test' else 'train/train_images'
-        prob = predict(model, np.stack([read_gray(root / sub / f, S) for f in names]), cfg['tta'], all_channels=True)
+        prob = predict(model, np.stack([read_gray(root / sub / f, S) for f in names]), cfg['tta'], bs=cfg.get('predict_bs', 4), all_channels=True)
         res[f'{split}_files'] = np.array(names)
         res[f'{split}_prob'] = prob[:, 0]
         if use_b:

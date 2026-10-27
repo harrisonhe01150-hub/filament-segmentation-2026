@@ -1,0 +1,19 @@
+{
+ "encoder": "efficientnet-b4",
+ "lr": 0.0004,
+ "wd": 0.0001,
+ "warmup": 150,
+ "n_folds": 5,
+ "seed": 2026,
+ "tta": 8,
+ "size": 2048,
+ "crop": 1024,
+ "epochs": 50,
+ "batch": 4,
+ "folds_to_run": [
+  0,
+  1
+ ],
+ "run_name": "R1_2048",
+ "predict_bs": 2
+}

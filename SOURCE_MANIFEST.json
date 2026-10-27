@@ -20,6 +20,7 @@
     "configs/B1b.json": "c47486734d68208b627f0b1ade4531954ce83198a42f07c86f811d4f756ac620",
     "configs/B2.json": "f0147f4cebd502be14b38483a06ca952b5fced28db4d5b0e33e246de2e600d03",
     "configs/B3.json": "f0240d1d01909e9252778805d7d46e80d39df259f4e4ccdde8e46079fbc0dbfa",
+    "configs/R1_2048.json": "0cb474529e8ea5145f694cc5109f3e75fa574333d3afefcc7ff2eacccfdb8e4b",
     "configs/S1.json": "55d594fdf07a03407395ada5a7ba788f0135f050f142526e2ddc1e5129e9e142",
     "configs/S1b.json": "52d96f89c9ae07a654211bfd9c1c63992e845f0ec5add1de58cc1ee2ea1fe470",
     "configs/v2.json": "eb4b53e1563337ef0ef3179076d98208a8dbede027f813c4daded501e5e67ae7",
@@ -54,7 +55,7 @@
     "src/make_submission.py": "e14aabedc3bc9b7561cf3bc0b23a520686c668830d73fc8432bc9f3cff6a465c",
     "src/postproc.py": "5adbc3ec075622a263fed64d20207399ec35936e33a469119c651ed10fa374ac",
     "src/predict.py": "1dba11123dde214e3e9be555691e966d68dc4e52aa1b1da4a3a1c1e92eec3a7d",
-    "src/train_seg.py": "5bd36bab13a8d0d5db84dc0effb30ed66a9c0c42c8d2c39c2c8f50ad47f0d49b",
+    "src/train_seg.py": "df5c98aef7e73dee4d892f2b34654b9fc7bf1b1aec44bd761f1d1216f0b7cfde",
     "tests/test_cpu_portability.py": "0d4603367c278d60c162c8e178bcbe8e6e641d24533497d868dd19271be74ce8",
     "tests/test_runtime_guards.py": "9e8d43c052de1cb4831761c83d29faf0c674c856c78fb45560484cd9c0d9771a",
     "tests/test_small_filament_sampling.py": "b5b55324be2615e927b08bbd8e6138cd2ac37a4e090d3182c6896d254c5550d3"
