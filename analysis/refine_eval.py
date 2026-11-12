@@ -4,6 +4,11 @@ Step 1, per fold (independent processes; without --fold all five run one after a
   python analysis/refine_eval.py --bank scratch/ws/refine/bank/oof --out scratch/ws/refine/eval --source stage1 --fold 0
 Step 2, the tables:
   python analysis/refine_eval.py --out scratch/ws/refine/eval --source refined --report
+Step 3, a submission from a TEST bank (analysis/refine_bank.py with "test") and the refined crops of its seeds
+(analysis/refine_train.py --apply), with the paste setting chosen in step 2:
+  python analysis/refine_eval.py --bank scratch/ws/refine/bank/test --pred scratch/ws/refine/sub/pred_pair
+      --submit outputs/refined.csv --paste '{"t_r": 0.6, "margin": 0.3, "t_join": 0.5, "absorb": 0.3}'
+Without --pred the stage-1 seeds are written, which must equal the fixed-rule submission mask for mask.
 
 --source says what replaces each kept stage-1 seed:
   stage1     nothing: the seeds themselves. Must reproduce the fixed-rule baseline exactly (sanity test A).
@@ -17,11 +22,6 @@ Two scoring rules for every label map:
              This is the rule of the leaderboard, and every choice below is made with it.
   pooled     all records of an image form one ground-truth set; a prediction matches at most its best filament
              (a side number only).
-Step 3, a submission from a TEST bank (analysis/refine_bank.py with "test") and the averaged predictions of the
-fold refiners (analysis/refine_train.py --apply), with the paste setting chosen above:
-  python analysis/refine_eval.py --bank scratch/ws/refine/bank/test --pred <folder with pred_f-1.npz>       --submit outputs/refined.csv --paste '{"t_r": 0.55, "margin": 0.3, "t_join": 0.5, "absorb": 0.3}'
-Without --pred the stage-1 seeds are written, which must equal the fixed-rule submission mask for mask.
-
 The paste settings are chosen in sample (all folds) and nested (for fold k on the other four folds); the nested
 number is the honest one. This is done separately for the families of settings in FAMILIES, so the tables show
 what the design alone gives and what the joining rules and the margin add.

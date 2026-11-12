@@ -21,6 +21,8 @@ checkpoints/
 !weights/*.pth
 !weights/*.ckpt
 !weights/*.onnx
+# training table of the learned keep rule (src/keep.py refits the model from it)
+!weights/*.npz
 
 # Credentials
 kaggle.json

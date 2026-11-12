@@ -3,8 +3,10 @@
   python analysis/refine_train.py --bank scratch/ws/refine/bank/oof --fold 0 --out scratch/ws/refine/run1
 The refiner for test images, trained on the seeds of all five folds (nothing is held out, only the weights are written):
   python analysis/refine_train.py --bank scratch/ws/refine/bank/oof --fold -1 --out scratch/ws/refine/run1
-Apply saved refiners to a bank without training (test seeds; several refiners are averaged):
-  python analysis/refine_train.py --bank scratch/ws/refine/bank/test --apply scratch/ws/refine/run1/refiner_f0.pt ... --out scratch/ws/refine/run1
+Apply saved refiners to a bank without training (test seeds; several refiners are averaged). Average exactly
+the refiners the paste setting was tuned for (scratch/ws/refine/FINAL_SETTING.json): more refiners give less
+extreme probabilities, and the margin of the paste-back depends on that.
+  python analysis/refine_train.py --bank scratch/ws/refine/bank/test --apply scratch/ws/refine/run1/refiner_f-1.pt scratch/ws/refine/run_kept/refiner_f0.pt --out scratch/ws/refine/sub/pred_pair
 
 The refiner of fold k learns from the seeds of the other four folds and predicts the seeds of fold k, which it
 never saw. All crops come from out-of-fold stage-1 maps, so the refiner is trained on stage-1 output of the same

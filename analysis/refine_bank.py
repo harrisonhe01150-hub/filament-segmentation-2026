@@ -9,7 +9,8 @@ Out-of-fold bank (members = one {fold: run folder} map per stage-1 model; severa
   python analysis/refine_bank.py '{"tag": "oof", "members": [{"0": "v2", "1": "v2", "2": "v2b", "3": "v2b", "4": "v2b"}]}'
 Test bank (test = probs npz files that hold test_prob; averaged exactly like src/make_submission.py):
   python analysis/refine_bank.py '{"tag": "test", "test": ["runs/v2/probs_f0.npz", "runs/v2/probs_f1.npz"]}'
-Optional keys: shard / nshard (independent processes), out (default scratch/ws/refine/bank), folds.
+Optional keys: shard / nshard (independent processes), out (default scratch/ws/refine/bank), folds,
+bridge (0.1 = the grouping of predict.POST_STACK: pieces linked by probability >= 0.1 are one seed; default 0).
 """
 import json
 import pickle
@@ -105,7 +106,7 @@ def main():
             gray = cv2.imread(str(folder / files[i]), cv2.IMREAD_GRAYSCALE)
             if gray is None or gray.shape != prob.shape:
                 raise ValueError(f'cannot read {folder / files[i]} as a {prob.shape} image')
-            items.append(image_bank(prob, gray, None if gt is None else gt[files[i]]))
+            items.append(image_bank(prob, gray, None if gt is None else gt[files[i]], spec.get('bridge', 0.0)))
             done += 1
             seeds += len(items[-1]['label'])
             if done % 20 == 0:

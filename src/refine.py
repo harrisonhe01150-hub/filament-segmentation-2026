@@ -159,11 +159,13 @@ def match_filaments(flat, n, area, ids, recs):
     return match, best_iou
 
 
-def image_bank(prob, gray, recs=None):
+def image_bank(prob, gray, recs=None, bridge=0.0):
     """Every seed of one image with its crops, and with its target when annotations are given.
 
     prob: stage-1 probability at 2048 on the 0-255 scale (uint8, or float32 for an average of models).
     gray: the uint8 image. recs: [(record id, [flat pixel indices of each filament])] or None (test images).
+    bridge: pieces connected through pixels of at least this probability are one seed (fastsweep.components;
+    0 = off, the final pipeline uses 0.1).
 
     Returns a dict of per-seed arrays: label (component number at SEED_T), kept (passes the stage-1 keep rule),
     area, mean (mean probability), M, scale, long, short, pix (list of flat pixel indices), one uint8 crop per
@@ -172,12 +174,12 @@ def image_bank(prob, gray, recs=None):
     record).
     """
     shape = prob.shape
-    labels, feats = components(prob, SEED_T, SEED_CLOSE)
+    labels, feats = components(prob, SEED_T, SEED_CLOSE, bridge)
     n = len(feats)
     ids = np.flatnonzero(feats[:, 0] >= SEED_MIN_AREA) + 1
     area = np.concatenate([[0], feats[:, 0]]).astype(np.int64)
     pix = pixel_lists(labels, n)
-    low, _ = components(prob, ZONE_T, SEED_CLOSE)       # the groups one threshold step lower contain the seeds
+    low, _ = components(prob, ZONE_T, SEED_CLOSE, bridge)   # the groups one threshold step lower contain the seeds
     is_seed = np.zeros(n + 1, bool)
     is_seed[ids] = True
     seed_map = is_seed[labels]
