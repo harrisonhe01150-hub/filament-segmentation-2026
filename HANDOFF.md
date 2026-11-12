@@ -3,6 +3,7 @@
 > 写给队友和队友的 Claude。先读这一页，再按需要读后面列出的文件。
 > 写于 2026-11-12 14:40（美国中部时间 CST，= 20:40 UTC）。分支 `harrison/final-sprint`，PR #10。
 > 时间一律写 UTC，括号里是美国中部时间（CST = UTC−6，11 月 1 日后已是冬令时）。
+> 11/12 22:55 UTC 补：今晚两份测试集 CSV 的副本放进了 `results/test_submissions_1113/`；最终流程在训练图上的折外预测放进了 `results/oof_final/`（画报告图用，不需要 2 GB 候选库）。
 
 ## 0. 一分钟版
 
@@ -93,13 +94,13 @@ PR #10 里的关键文件：
 3. **权重已在仓库里**（`weights/`，SHA256 见 `weights/README.md`；拉下后可用 `sha256sum weights/*` 核对）。最后定了轻量版的话，可以把 5 个 `refiner_f*.pt` 从 `main` 上删掉，也可以留着。
 4. **跑一遍最终 notebook 并提交带输出的版本**。
    - 在有权重的机器上跑 `notebooks/end_to_end_final.ipynb`（180 张图，`FP32 = True`，RTX 5070 Ti 上约 7 分钟，CPU 上约 70 分钟），保存带输出的 notebook 提交。
-   - 用 `python analysis/compare_csv.py outputs/submission_final.csv <提交过的那份>` 逐条比，每条掩码 IoU ≥ 0.999 就算复现。
+   - 用 `python analysis/compare_csv.py outputs/submission_final.csv results/test_submissions_1113/K1_refine_fp32.csv`（轻量版比 `K1_light_fp32.csv`）逐条比，每条掩码 IoU ≥ 0.999 就算复现。
    - 用轻量版的话，把 notebook 的 `USE_REFINER` 改成 `False` 再跑。
 5. **合并 PR #10 进 `main`**（会顺带合进 #9）。合之前跑一遍 `tests/` 下 4 个脚本和 `python scripts/update_manifest.py`（notebook 第一格会核对文件哈希）。
 6. **报告**（4 页，官方 Overleaf 模板；分工见 `TEAM_ROLES.md` 第 7 节）。
    - 方法：照 `docs/FINAL_PIPELINE_zh-CN.md` 写（三步：主模型 + 候选 → 学习型留/删 → 逐条细化）。
    - 结果：折外分数阶梯用 2.1 节的表或 `SUMMARY.json`；按 1/2/3 人标注拆开的分数在 `EXPERIMENTS.md` K1 一节。
-   - 评分里有 Dice / IoU 分布、拆分（1:n）和合并（n:1）次数。以前的图（`report/figures/`）是 v2 的；有时间就用最终流程重画（`analysis/diagnose.py`、`analysis/report_figs.py`）。
+   - 评分里有 Dice / IoU 分布、拆分（1:n）和合并（n:1）次数。以前的图（`report/figures/`）是 v2 的；有时间就用最终流程重画。**数据已在仓库里**：`results/oof_final/`（最终流程在 707 张训练图上的折外预测，完整版和轻量版各一份，提交格式；每张图的 TP/FP/FN；每个候选的留/删分数、是否留下、和每份标注的最佳 IoU 及掩码）。说明见那里的 `README.md`。`analysis/report_figs.py` 现在读的是 v2 的候选表，要改成读这几个文件。
    - 可复现性：`report/reproducibility.md`（CPU 和 GPU 用 float32 结果一致：1159 条里 1158 条完全相同。这是在下午修正留/删描述量之前的版本上测的；修正不涉及跨设备的那部分，但修正后的文件没有再在 CPU 上跑过）。
    - **主动写清的局限**：K1 是事后补记的探索性实验（复核过）；对外收益按 +0.007 说，不按最初算的 +0.008；2018–2022 年的图上没有收益；细化的贴回设置是在全部五折上选的。
 7. **在 Kaggle 上选 2 份最终提交**（11/15 06:00 UTC 前，手动）。
@@ -156,6 +157,8 @@ PR #10 里的关键文件：
 | `docs/handoff_1112/k2_snapshot/` | K2 代码快照（原样跑不起来，见第 4 节） |
 | `docs/BASELINE_AND_PROVENANCE.txt`、`docs/INTEGRATION_zh-CN.txt` | v2 基线的来源说明 |
 | `report/reproducibility.md`、`report/figures/` | 报告「可复现性」草稿；v2 的诊断图 |
+| `results/oof_final/` | **最终流程的折外预测**（707 张训练图，完整版 + 轻量版，提交格式），每张图和每个候选的明细；由 `analysis/export_oof_final.py` 生成。画报告图用这个，不需要 2 GB 的候选库 |
+| `results/test_submissions_1113/` | **今晚自动提交的两份测试集 CSV 的副本**（`K1_refine_fp32.csv`、`K1_light_fp32.csv`）和 SHA256；拿重跑结果来比对用 |
 | `results/evidence/` | 小型结果摘要：`final_sprint_1112/SUMMARY.json`（折外分数阶梯）、`full_v2_oof/`、`LIVE_SUBMISSIONS.json`（**只记到 10/23，需要补**）等 |
 | `tests/` | 4 个 CPU 自检 |
 | `requirements*.txt` | 固定版本的依赖（含 scikit-learn、notebook 内核） |
@@ -166,7 +169,7 @@ PR #10 里的关键文件：
 
 | 位置 | 大小 | 内容 | 什么时候需要 |
 |---|---|---|---|
-| `scratch/sub_1113/final/K1_light_fp32.csv`、`K1_refine_fp32.csv` | 各 0.3 MB | **今晚自动提交的两份**（各 1163 条） | 自动提交没成功、要手动交时（有权重也可以用第 7 节命令重新生成） |
+| `scratch/sub_1113/final/K1_light_fp32.csv`、`K1_refine_fp32.csv` | 各 0.3 MB | **今晚自动提交的两份**（各 1163 条）。**副本已放进仓库** `results/test_submissions_1113/` | 不需要找 Harrison 要了 |
 | `scratch/sub_1113/SUBMIT_LOG.json`、`lb_before/`、`lb_after_*/` | 小 | 自动提交的日志和每次提交后下载的榜单 | 记提交结果时 |
 | `scratch/sub_1112/` | 2 MB | 11/12 已交的 5 份（`full2_stack_b01_d048.csv` 是目前最好的 0.39） | 一般不需要（Kaggle 上能直接选） |
 | `scratch/sub_1113/` 其余文件 | 11 MB | 中间版本的候选、`dense_fp32/`（测试集两个主模型的 float32 概率图）、CPU 复现日志 | 不需要 |
@@ -179,7 +182,7 @@ PR #10 里的关键文件：
 | `runs/v2_s2028_5070ti/`、`runs/v2_full_s2028_5070ti/` | 0.5 GB | 第三套模型（M3，没通过） | 不需要 |
 | `runs/S1_5070ti/`、`R1_2048_5070ti/`、`B1/B2/B3_5070ti/`、`LT_5070ti/`、`ms1344_k/`、`ms1728_k/` | 各约 0.1–0.2 GB | 没通过的实验的模型和折外概率图 | 不需要 |
 | `runs/GPU_QUEUE.json`、`runs/*.log` | 小 | 显卡任务队列的记录 | 不需要 |
-| `scratch/ws/main/rbank/kc_bridge/`、`test_full2_bridge/` | 2 GB | 最终流程的候选库（训练折外 6788 个候选、测试 1727 个，含小图） | 重算留/删或细化的折外分数 |
+| `scratch/ws/main/rbank/kc_bridge/`、`test_full2_bridge/` | 2 GB | 最终流程的候选库（训练折外 6788 个候选、测试 1727 个，含小图） | 只有重算留/删或细化的折外分数才要。**画报告图不需要**：最终流程的折外预测已导出到仓库的 `results/oof_final/` |
 | `scratch/ws/main/kcb/pred/` | 小 | 细化网络对折外候选的预测 | `keep_eval.py --shape refine` |
 | `scratch/keep/oof/`、`scratch/keep/test/` | 小 | 留/删描述量表、交叉拟合分数、评估结果（`oof_v1/`、`test_v1/` 是修正前的版本，`oof_sym2/`、`oof_m3/` 是 M3 实验） | `keep_fit.py`、`keep_eval.py` |
 | `scratch/ws/refine/run1/`、`run_kept/` | 1.7 GB（整个 `refine/`） | 细化网络的训练输出（`run1/refiner_f0..4.pt` = `weights/refiner_f*.pt`），`RESULTS.md` 是细化实验的详细记录 | 一般不需要 |
