@@ -298,14 +298,20 @@ def net_input(planes):
     return x
 
 
-def predict_crops(model, planes, batch=64):
+def predict_crops(model, planes, batch=64, fp16=True):
     """Refined probability of every crop, averaged over the four flips. planes: uint8 tensor (N, >=4, H, W) on
-    the model's device. Returns a uint8 array (N, H, W)."""
+    the model's device. Returns a uint8 array (N, H, W).
+
+    On CUDA, fp16=True uses float16 autocast as in training; fp16=False runs true float32 (TF32 off), which is
+    what other devices compute, so use it for a file that must be reproduced elsewhere."""
     import torch
     dev = next(model.parameters()).device
     out = np.zeros((len(planes), CROP_H, CROP_W), np.uint8)
     model.eval()
-    with torch.inference_mode(), torch.autocast(dev.type, enabled=dev.type == 'cuda'):
+    if dev.type == 'cuda' and not fp16:
+        torch.backends.cudnn.allow_tf32 = False
+        torch.backends.cuda.matmul.allow_tf32 = False
+    with torch.inference_mode(), torch.autocast(dev.type, enabled=dev.type == 'cuda' and fp16):
         for i in range(0, len(planes), batch):
             x = net_input(planes[i:i + batch].float() / 255)
             acc = 0

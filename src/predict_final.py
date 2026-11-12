@@ -55,11 +55,12 @@ def dense_maps(model_paths, cfg, images, files, device, fp32):
     return out
 
 
-def image_instances(members, gray, keep_model, refiners, tau=keep.TAU, device='cpu'):
+def image_instances(members, gray, keep_model, refiners, tau=keep.TAU, device='cpu', fp16=True):
     """Label map (0 = background, 1..K) of one image and a few counts.
 
     members: the dense models' maps of the image at 2048 px (uint8); gray: the uint8 image.
     refiners: loaded refiner models (several are averaged), or an empty list for the lighter variant.
+    fp16: float16 refiner inference on CUDA (faster); False = float32, the same numbers as on other devices.
     """
     prob = np.mean([m.astype(np.float32) for m in members], 0)
     seeds = refine.image_bank(prob, gray, None, bridge=FINAL['bridge'])
@@ -81,7 +82,7 @@ def image_instances(members, gray, keep_model, refiners, tau=keep.TAU, device='c
     planes = torch.from_numpy(np.stack([seeds[name][chosen] for name in refine.PLANES[:refine.N_INPUT]], 1)).to(device)
     acc = np.zeros((len(chosen), refine.CROP_H, refine.CROP_W), np.float32)
     for model in refiners:
-        acc += refine.predict_crops(model, planes)
+        acc += refine.predict_crops(model, planes, fp16=fp16)
     refined = np.round(acc / len(refiners))
     w = FINAL['blend']
     blended = np.round(w * refined + (1 - w) * seeds['prob'][chosen].astype(np.float32)).astype(np.uint8)
@@ -111,7 +112,7 @@ def main():
     p.add_argument('--keep-table', type=Path, required=True)
     p.add_argument('--tau', type=float, default=keep.TAU)
     p.add_argument('--device', help='cuda, mps or cpu (default: best available)')
-    p.add_argument('--fp32', action='store_true', help='float32 dense maps on CUDA too (with --dense)')
+    p.add_argument('--fp32', action='store_true', help='float32 on CUDA too (dense models with --dense, and the refiners), so other machines reproduce the file')
     p.add_argument('--out', type=Path, required=True)
     a = p.parse_args()
     if a.out.exists():
@@ -145,7 +146,7 @@ def main():
         gray = cv2.imread(str(a.images / f), cv2.IMREAD_GRAYSCALE)
         if gray is None or gray.shape != refine.IMAGE_SHAPE:
             raise ValueError(f'cannot read {a.images / f} as a {refine.IMAGE_SHAPE} image')
-        labels, info = image_instances([upsample(m[i]) for m in maps], gray, keep_model, refiners, a.tau, device)
+        labels, info = image_instances([upsample(m[i]) for m in maps], gray, keep_model, refiners, a.tau, device, fp16=not a.fp32)
         new = rows_of(labels, f)
         rows += new
         if not new:
@@ -157,7 +158,7 @@ def main():
     write_csv(rows, a.out)
     print(json.dumps(dict(rows=len(rows), images=len(files), images_checked_disjoint=checked, empty_images=empty,
                           candidates=total['seeds'], kept=total['kept'], fixed_rule_would_keep=total['fixed_rule'],
-                          tau=a.tau, refiners=[str(x) for x in a.refiners], settings=FINAL, device=str(device),
+                          tau=a.tau, refiners=[str(x) for x in a.refiners], settings=FINAL, device=str(device), fp32=a.fp32,
                           secs=round(time.time() - t0))), flush=True)
 
 
