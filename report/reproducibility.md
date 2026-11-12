@@ -34,7 +34,12 @@ reproduces the probability maps produced during training bit for bit. Across dev
 autocast) probability maps differ by at most 1/255 per pixel; the resulting masks agree with IoU 0.9996 at the 0.4
 threshold. A fresh clone on Windows, installed only by the README steps, passes `pip check`, both self-tests and the
 notebook end to end (Oct 24). A clean-clone run on a different machine (Apple MPS) is accepted when every mask matches the submitted
-CSV with IoU ≥ 0.999 (**TBD**: result of the Nov 10 cross-machine test). GPU training itself is not bit-for-bit
+CSV with IoU ≥ 0.999. Result (Nov 12, final pipeline, fresh clone and environment on an Apple-silicon Mac, MPS,
+float32): 1163 filaments, the same count as the submitted file; 1161 match, 2 borderline candidates leave and 2 enter;
+matched masks differ by a median of 1 pixel (mean IoU 0.9989, 99.3% at IoU ≥ 0.99, 63.6% at ≥ 0.999, minimum 0.969;
+light variant: mean 0.9996, all ≥ 0.99, 86.1% ≥ 0.999). The strict criterion is not met on MPS: its float32 dense maps
+differ from the CUDA ones in the last bits, which moves edge pixels at the 0.48 / 0.5 thresholds
+(**TBD**: Mac CPU run). GPU training itself is not bit-for-bit
 deterministic, which is why the weights are part of the repository.
 
 **Metric.** Our local PQ implementation follows the organizers' self-evaluation notebook (IoU > 0.5 pairs are true

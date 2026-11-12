@@ -28,7 +28,7 @@ def diagnose(T):
     disagree = Counter()
     for r in T['rows']:
         f = r['feats']
-        keep = (f[:, A] >= 300) & (f[:, M] >= .85)
+        keep = r['keep'] if 'keep' in r else (f[:, A] >= 300) & (f[:, M] >= .85)  # 'keep': final pipeline
         P = f[:, A]
         tp_somewhere = np.zeros(len(f), bool)  # component is a TP for at least one expert of this image
         for iou in r['ious']:
