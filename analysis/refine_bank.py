@@ -13,7 +13,6 @@ Optional keys: shard / nshard (independent processes), out (default scratch/ws/r
 bridge (0.1 = the grouping of predict.POST_STACK: pieces linked by probability >= 0.1 are one seed; default 0).
 """
 import json
-import pickle
 import sys
 import time
 import zipfile
@@ -24,11 +23,13 @@ import numpy as np
 
 WORK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WORK / 'src'))
+sys.path.insert(0, str(WORK / 'analysis'))
+from tree_bank import gt_index
 from postproc import upsample
 from refine import PLANES, image_bank
 
 DATA = WORK / 'data/MAGFiLO_1.0_Kaggle_2026'
-GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # written by analysis/tree_bank.py from the TRAIN annotations
+GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # TRAIN annotations as pixel lists; built on first use (about 2 minutes)
 
 
 def read_maps(path, key, rows):
@@ -83,7 +84,7 @@ def main():
         for fold in spec.get('folds', range(5)):
             jobs.append((fold, [WORK / 'runs' / m[str(fold)] / f'probs_f{fold}.npz' for m in spec['members']],
                          'val_prob', 'val_files', DATA / 'train/train_images'))
-    gt = None if 'test' in spec else pickle.loads(GT_INDEX.read_bytes())
+    gt = None if 'test' in spec else gt_index(GT_INDEX)
     done = seeds = 0
     for fold, paths, map_key, file_key, folder in jobs:
         target = out / f'bank_f{fold}_s{shard}of{nshard}.npz'

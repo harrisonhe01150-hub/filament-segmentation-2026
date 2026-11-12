@@ -38,12 +38,14 @@ import numpy as np
 
 WORK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WORK / 'src'))
+sys.path.insert(0, str(WORK / 'analysis'))
+from tree_bank import gt_index
 import refine
 from common import PQ
 from make_submission import check_disjoint, write_csv
 from postproc import score_file
 
-GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # written by analysis/tree_bank.py from the TRAIN annotations
+GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # TRAIN annotations as pixel lists; built on first use (about 2 minutes)
 SHAPE = refine.IMAGE_SHAPE
 KEEP_SHAPE = float('inf')                          # margin that never changes a seed (see refine.paste_image)
 
@@ -145,7 +147,7 @@ def run_fold(bank_dir, fold, source, pred_dir, out_dir):
             if not (np.array_equal(z['fname'], bank['fname']) and np.array_equal(z['label'], bank['label'])):
                 raise ValueError('predictions and bank list different seeds')
             crops = z['pred']
-    gt = pickle.loads(GT_INDEX.read_bytes())
+    gt = gt_index(GT_INDEX)
     start = {f: i for i, f in reversed(list(enumerate(bank['fname'])))}
     count = {f: int(n) for f, n in zip(*np.unique(bank['fname'], return_counts=True))}
     settings = settings_of(source)

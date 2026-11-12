@@ -33,7 +33,8 @@ that image alone.
    The model is refitted here from its training table (a few seconds, deterministic).
 4. **Shape (refiner).** For every kept candidate, a small U-Net looks at an oriented crop of the image and predicts
    the outline the annotators who drew this filament would draw. Its probability is averaged 50/50 with the dense
-   probability and thresholded at 0.5; candidates whose refined masks claim the same pixels are joined.
+   probability and thresholded at 0.5. (Candidates whose refined masks claim the same pixels are joined; with
+   these settings that almost never happens, the gain of this step comes from the outline.)
    `USE_REFINER = False` writes each kept candidate at probability >= 0.48 instead (lighter variant).
 5. **Output.** One row per filament, `filament_id = <image>_<n>`, COCO RLE counts. Every pixel has at most one
    label, so **masks never overlap**; the CSV is still checked explicitly.
@@ -59,7 +60,6 @@ LIMIT = int(os.environ.get('FILAMENT_LIMIT', 0)) or None   # predict only the fi
 FP32 = True                                        # float32 on every device, so any machine reproduces the CSV"""
 
 ENV = """from importlib.metadata import version
-import warnings
 import numpy as np, torch, cv2
 import keep, refine
 from train_seg import CFG, pick_device
@@ -67,7 +67,6 @@ from postproc import upsample
 from predict_final import FINAL, dense_maps, image_instances, rows_of
 from make_submission import check_disjoint, write_csv
 
-warnings.filterwarnings('ignore', message='invalid value encountered in divide')   # mean of an empty label
 device = pick_device(DEVICE)
 print(' | '.join(f'{p} {version(p)}' for p in ['torch', 'segmentation-models-pytorch', 'timm', 'scikit-learn', 'numpy',
                                                 'opencv-python-headless', 'pycocotools']))
@@ -89,6 +88,7 @@ python src/train_seg.py --config configs/v2_full.json       --out runs/v2_full_5
 python src/train_seg.py --config configs/v2_full_s2027.json --out runs/v2_full_s2027_5070ti  # -> model_full_s2027.pt
 
 # 2. refiners: seeds of the out-of-fold maps, one refiner per fold (trained without that fold) -> refiner_f*.pt
+#    (the first analysis command builds scratch/bank/gt_index.pkl from the TRAIN annotations, about 2 minutes)
 python analysis/refine_bank.py '{"tag": "oof", "members": [{"0": "v2", "1": "v2", "2": "v2b", "3": "v2b", "4": "v2b"}]}'
 python analysis/refine_train.py --bank scratch/ws/refine/bank/oof --fold 0 --out scratch/ws/refine/run1   # and folds 1-4
 
@@ -147,7 +147,8 @@ VAL_MD = """## Local validation (out-of-fold)
 Scores on held-out training images with the official self-evaluation rule (`src/common.py`): every annotator
 record is scored separately, and the counts are pooled. All maps are out of fold; the refiner and the keep model
 that process an image were trained without that image's fold; the keep threshold is chosen per fold on the other
-four folds."""
+four folds. The shape settings (blend 0.5, threshold 0.5, absorb 0.3) were chosen on all five folds; with that
+choice nested as well, the refiner row is 0.4483 and the last row about 0.455."""
 
 VAL = """oof = json.loads((ROOT / 'results' / 'evidence' / 'final_sprint_1112' / 'SUMMARY.json').read_text())
 print(f"{oof['images']} images, {oof['records']} annotator records")

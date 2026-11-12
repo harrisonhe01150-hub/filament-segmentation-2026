@@ -6,11 +6,14 @@ stage-1 component (a "seed") gets its own small picture, rotated so that the fil
 so that it fits with room to grow at both ends. A U-Net sees the image, the stage-1 probability, the seed and the
 other seeds, and predicts the outline that the annotators who drew *this* filament agreed on.
 
-How its output is used (measured out of fold, see scratch/ws/refine/RESULTS.md): pasting the refined outline as
-it is makes the score worse, because for a seed that already matches an annotator the small changes of its
-outline are noise. Used with care it helps in two ways. Seeds whose refined masks claim the same pixels are
-pieces of one drawn filament and become one instance (`assemble`), and the stage-1 mask is changed only where the
-refiner is sure (`refined_piece` with a margin). Which seeds are kept is still decided by the stage-1 rule.
+How its output is used (measured out of fold, EXPERIMENTS.md "S2" and "K1"): pasting the refined outline as it is
+makes the score worse, because for a seed that already matches an annotator the small changes of its outline are
+noise. In the final pipeline (src/predict_final.py) the refined probability is averaged 50/50 with the stage-1
+probability inside the crop and thresholded at 0.5; the pieces that touch the seed are the mask (`refined_piece`
+with margin 0). Seeds whose refined masks claim the same pixels become one instance (`assemble` with absorb 0.3);
+with the final settings that is rare (1 of 4360 kept seeds out of fold), it is a safeguard, not a source of the
+gain. Which seeds are submitted is decided by the learned keep rule (src/keep.py), not here. `refined_piece` also
+has a `margin` option (change the stage-1 mask only where the refiner is sure); an earlier variant used it.
 
 Coordinates: pixel centres sit at integer coordinates (the OpenCV convention). The 2x3 matrix `M` of a seed maps
 crop coordinates to image coordinates: [x_image, y_image] = M @ [x_crop, y_crop, 1]. `to_crop` and `to_image` are
@@ -33,7 +36,7 @@ MIN_LONG, MIN_SHORT = 64.0, 16.0     # ... of a seed at least this long and wide
 MAX_SCALE = 2.0                      # ... and never magnifies more than this
 SEED_T, SEED_CLOSE = 0.4, 8          # stage-1 instances: threshold and grouping radius (predict.POST)
 SEED_MIN_AREA = 100                  # smaller components are neither refined nor shown as "other seeds"
-KEEP_MIN_AREA, KEEP_MIN_MEAN = 300, 0.85   # the stage-1 keep rule (predict.POST); only kept seeds are submitted
+KEEP_MIN_AREA, KEEP_MIN_MEAN = 300, 0.85   # the fixed keep rule of predict.POST: the bank's `kept` column (for comparison)
 ZONE_T = 0.3                         # lowest seed threshold the training augmentation imitates
 MATCH_IOU = 0.15                     # a drawn filament is "the same filament" as a seed above this IoU ...
 MATCH_COVER = 0.5                    # ... or when one covers more than this share of the other

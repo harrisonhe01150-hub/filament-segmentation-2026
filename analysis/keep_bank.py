@@ -39,8 +39,6 @@ def fold_table(bank_dir, fold, map_paths, map_key, file_key):
                 raise ValueError(f'{path} lists other images than {map_paths[0]}')
             files = names
             maps.append(z[map_key])
-    if len(maps) != 2:
-        raise ValueError('the descriptors compare exactly two member models')
     row = {f: i for i, f in enumerate(files)}
     fname = b['fname'].astype(str)
     X = np.zeros((len(fname), len(keep.NAMES)), np.float32)
@@ -52,7 +50,7 @@ def fold_table(bank_dir, fold, map_paths, map_key, file_key):
         seeds = {k: (b[k][start:end] if k != 'pix' else b[k][start:end]) for k in SEED_KEYS}
         X[start:end] = keep.image_descriptors(seeds, [upsample(m[row[fname[start]]]) for m in maps])
         start = end
-    out = dict(X=X, fname=fname, label=b['label'], kept=b['kept'])
+    out = dict(X=X, fname=fname, label=b['label'], kept=b['kept'], members=np.int64(len(maps)))
     if fold >= 0:
         out['best_iou'] = b['best_iou']
     return out

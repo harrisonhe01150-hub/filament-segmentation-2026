@@ -86,11 +86,14 @@ python src/predict.py --weights runs/v2 --config configs/v2.json --fp32 --out ou
 Final pipeline (two full-data models, learned keep rule, per-filament refiner; files listed in `weights/README.md`):
 
 ```bash
-python src/predict_final.py --dense weights/model_full_s2026.pt weights/model_full_s2027.pt --config configs/v2_full.json     --refiners weights/refiner_f0.pt weights/refiner_f1.pt weights/refiner_f2.pt weights/refiner_f3.pt weights/refiner_f4.pt     --keep-table weights/keep_table.npz --out outputs/submission.csv
+python src/predict_final.py --dense weights/model_full_s2026.pt weights/model_full_s2027.pt --config configs/v2_full.json \
+    --refiners weights/refiner_f0.pt weights/refiner_f1.pt weights/refiner_f2.pt weights/refiner_f3.pt weights/refiner_f4.pt \
+    --keep-table weights/keep_table.npz --fp32 --out outputs/submission.csv
 ```
 
-`--no-refiner` instead of `--refiners ...` gives the lighter variant (no refiner networks). Out-of-fold scores of
-every stage are in `EXPERIMENTS.md`.
+`--fp32` is how the submitted file was made (on a CUDA GPU the default is float16, which moves a few borderline
+candidates; CPU and Apple MPS always compute in float32). `--no-refiner` instead of `--refiners ...` gives the
+lighter variant (no refiner networks). Out-of-fold scores of every stage are in `EXPERIMENTS.md`.
 
 ## Rules worth remembering
 

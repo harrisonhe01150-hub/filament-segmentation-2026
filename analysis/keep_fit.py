@@ -18,7 +18,6 @@ analysis/keep_eval.py repeats the comparison on real label maps, with the final 
 """
 import argparse
 import json
-import pickle
 import sys
 from pathlib import Path
 
@@ -26,10 +25,12 @@ import numpy as np
 
 WORK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WORK / 'src'))
+sys.path.insert(0, str(WORK / 'analysis'))
+from tree_bank import gt_index
 import keep
 import refine
 
-GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # written by analysis/tree_bank.py from the TRAIN annotations
+GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # TRAIN annotations as pixel lists; built on first use (about 2 minutes)
 TAUS = np.round(np.arange(.16, .331, .01), 2)
 
 
@@ -45,14 +46,16 @@ def main():
     ap.add_argument('--table', type=Path)
     a = ap.parse_args()
     X, fold, fname, label, kept, iou = [], [], [], [], [], []
+    members = None
     for k in range(5):
         with np.load(a.tables / f'keep_f{k}.npz', allow_pickle=False) as z:
+            members = int(z['members'])
             X.append(z['X']); fname.append(z['fname']); label.append(z['label']); kept.append(z['kept']); iou.append(z['best_iou'])
             fold += [k] * len(z['X'])
     X, fold, fname, label = np.concatenate(X), np.array(fold), np.concatenate(fname).astype(str), np.concatenate(label)
     kept, iou = np.concatenate(kept), np.concatenate(iou)
     u, R, s_sum, tp = keep.target(iou)
-    gt = pickle.loads(GT_INDEX.read_bytes())
+    gt = gt_index(GT_INDEX)
     image_fold = {f: k for k in range(5) for f in refine.load_images(a.bank, k)}     # includes images without seeds
     images = sorted(image_fold)
     index = {f: i for i, f in enumerate(images)}
@@ -116,7 +119,7 @@ def main():
         np.savez_compressed(a.scores, fname=fname, label=label, fold=fold, score=score, kept=kept)
     if a.table:
         a.table.parent.mkdir(parents=True, exist_ok=True)
-        keep.save_table(a.table, X, u, R)
+        keep.save_table(a.table, X, u, R, members)
 
 
 if __name__ == '__main__':

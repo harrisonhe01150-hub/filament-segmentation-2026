@@ -6,7 +6,7 @@ last leaderboard checks).
 
 | File here | Made by | Local source on the training machine | Size | SHA256 |
 |---|---|---|---|---|
-| `keep_table.npz` | `analysis/keep_fit.py --table` (6788 seeds x 50 descriptors, labels from the TRAIN annotations) | committed | 1.0 MB | `b2b3a4028070e258fa467e21c55257c059e576c5a7fa7c9d4f631a0d2d6e6564` |
+| `keep_table.npz` | `analysis/keep_fit.py --table` (6788 seeds x 50 descriptors from 2 member models, labels from the TRAIN annotations) | committed | 1.0 MB | `e2d35e8a87ff90297d996c4070f836f98e32a16d8c9174014447a4c8adaf030a` |
 | `model_full_s2026.pt` | `src/train_seg.py --config configs/v2_full.json` (all 707 images, seed 2026) | `runs/v2_full_5070ti/model_f-1.pt` | 81.7 MB | `ad5647c7f69f2541a5d91140c6d03b956775bb9d3fc5bc9e2ee6af3529bfbdec` |
 | `model_full_s2027.pt` | `src/train_seg.py --config configs/v2_full_s2027.json` (seed 2027) | `runs/v2_full_s2027_5070ti/model_f-1.pt` | 81.7 MB | `e616121936b6f6b480c0f2242d89ef554f879734edd17e5617576123b4894bee` |
 | `refiner_f0.pt` | `analysis/refine_train.py --fold 0` (seeds of folds 1-4) | `scratch/ws/refine/run1/refiner_f0.pt` | 41.0 MB | `fbfd5d5e40198a20982976ad1723ea56790a11c5f7b71ad26aa3094e8219db96` |

@@ -14,7 +14,6 @@ tau is chosen per fold on the other four folds. Shapes:
 """
 import argparse
 import json
-import pickle
 import sys
 import time
 from pathlib import Path
@@ -23,12 +22,14 @@ import numpy as np
 
 WORK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WORK / 'src'))
+sys.path.insert(0, str(WORK / 'analysis'))
+from tree_bank import gt_index
 import refine
 from common import PQ
 from postproc import score_file, upsample
 from predict_final import FINAL
 
-GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # written by analysis/tree_bank.py from the TRAIN annotations
+GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # TRAIN annotations as pixel lists; built on first use (about 2 minutes)
 TAUS = (0.20, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28)
 
 
@@ -48,7 +49,7 @@ def main():
     a = ap.parse_args()
     with np.load(a.scores, allow_pickle=False) as z:
         sfile, slabel, sfold, sscore = z['fname'].astype(str), z['label'], z['fold'], z['score']
-    gt = pickle.loads(GT_INDEX.read_bytes())
+    gt = gt_index(GT_INDEX)
     n_pix = refine.IMAGE_SHAPE[0] * refine.IMAGE_SHAPE[1]
     members = json.loads(a.members) if a.members else None
     rows, t0 = [], time.time()

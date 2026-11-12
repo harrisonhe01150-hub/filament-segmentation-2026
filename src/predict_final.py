@@ -9,13 +9,16 @@ Stages, per image
   3. keep        the learned keep rule (src/keep.py): a seed is submitted when its predicted score > keep.TAU
   4. shape       the stage-2 refiners (src/refine.py) are averaged, blended 50/50 with the dense probability inside
                  the seed's crop and thresholded at 0.5; the pieces that touch the seed are the mask; seeds whose
-                 refined masks claim the same pixels are joined (refine.assemble, absorb 0.3)
+                 refined masks claim the same pixels are joined (refine.assemble, absorb 0.3; rare: 1 of 4360
+                 kept candidates out of fold, none in the test set; kept as a safeguard)
                  --no-refiner: each kept seed is written at probability >= 0.48 instead (lighter variant)
 
 Usage (dense maps from weights)
   python src/predict_final.py --dense weights/model_full_s2026.pt weights/model_full_s2027.pt --config configs/v2_full.json
       --refiners weights/refiner_f0.pt weights/refiner_f1.pt weights/refiner_f2.pt weights/refiner_f3.pt weights/refiner_f4.pt
-      --keep-table weights/keep_table.npz --out outputs/submission.csv
+      --keep-table weights/keep_table.npz --fp32 --out outputs/submission.csv
+(--fp32 is what the submitted file was made with: on CUDA the default is float16, which moves a few borderline
+candidates; on CPU and Apple MPS everything is float32 anyway)
 or with dense maps saved by train_seg.py (test_files / test_prob):
   python src/predict_final.py --probs runs/v2_full_5070ti/probs_f-1.npz runs/v2_full_s2027_5070ti/probs_f-1.npz ...
 
@@ -103,8 +106,8 @@ def rows_of(labels, file_name):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--probs', type=Path, nargs=2, help='two .npz with test_files and test_prob (saved dense maps)')
-    p.add_argument('--dense', type=Path, nargs=2, help='two dense model weights (used when --probs is not given)')
+    p.add_argument('--probs', type=Path, nargs='+', help='.npz files with test_files and test_prob (saved dense maps), one per model')
+    p.add_argument('--dense', type=Path, nargs='+', help='dense model weights (used when --probs is not given)')
     p.add_argument('--config', type=Path, help='training config of the dense models (with --dense)')
     p.add_argument('--images', type=Path, default=TEST_IMAGES)
     p.add_argument('--refiners', type=Path, nargs='*', default=[], help='refiner_f*.pt files, averaged')
@@ -113,6 +116,7 @@ def main():
     p.add_argument('--tau', type=float, default=keep.TAU)
     p.add_argument('--device', help='cuda, mps or cpu (default: best available)')
     p.add_argument('--fp32', action='store_true', help='float32 on CUDA too (dense models with --dense, and the refiners), so other machines reproduce the file')
+    p.add_argument('--save-probs', type=Path, help='folder to store the dense maps computed with --dense (dense_<n>.npz, usable as --probs)')
     p.add_argument('--out', type=Path, required=True)
     a = p.parse_args()
     if a.out.exists():
@@ -139,7 +143,11 @@ def main():
         if not files:
             raise FileNotFoundError(f'no .jpeg images in {a.images}')
         maps = dense_maps(a.dense, cfg, a.images, files, device, a.fp32)
-    keep_model = keep.load_model(a.keep_table)
+        if a.save_probs:
+            a.save_probs.mkdir(parents=True, exist_ok=True)
+            for n, m in enumerate(maps):
+                np.savez_compressed(a.save_probs / f'dense_{n}.npz', test_files=np.array(files), test_prob=m)
+    keep_model = keep.load_model(a.keep_table, members=len(maps))
     refiners = [refine.load_refiner(path, refine.ENCODER, device) for path in a.refiners]
     rows, empty, total = [], [], dict(seeds=0, fixed_rule=0, kept=0)
     for i, f in enumerate(files):

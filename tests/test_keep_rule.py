@@ -46,7 +46,8 @@ assert X.shape == (n, len(keep.NAMES)) and np.isfinite(X).all()
 assert np.array_equal(X, keep.image_descriptors(seeds, members)), 'descriptors are not deterministic'
 col = {name: i for i, name in enumerate(keep.NAMES)}
 assert np.allclose(X[:, col['area']], seeds['area']) and np.all(X[:, col['n_seeds']] == n)
-assert np.all(X[:, col['mem_a']] >= X[:, col['mem_b']]), 'the second member was scaled down'
+assert np.all(X[:, col['mem_max']] >= X[:, col['mem_min']])
+assert np.array_equal(X, keep.image_descriptors(seeds, members[::-1])), 'descriptors depend on the order of the member models'
 assert np.all((X[:, col['rank_mean']] >= 0) & (X[:, col['rank_mean']] < 1))
 
 # annotations must not reach the descriptors: the same seeds and descriptors with and without them

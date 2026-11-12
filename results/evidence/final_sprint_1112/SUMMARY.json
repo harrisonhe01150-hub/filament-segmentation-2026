@@ -4,7 +4,7 @@
   "images": 707,
   "records": 1154,
   "scoring": "organisers' self-evaluation rule: every annotator record scored separately, IoU > 0.5 pairs are TP, pooled PQ; real label maps through src/postproc.score_file",
-  "protocol": "all probability maps out of fold; refiner of fold k trained without fold k; keep model cross-fitted by fold; its threshold chosen per fold on the other four folds (nested)",
+  "protocol": "all probability maps out of fold; refiner of fold k trained without fold k; keep model cross-fitted by fold; its threshold chosen for fold k by an inner cross-fit that never sees fold k (strict nesting). The shape settings (blend 0.5, threshold 0.5, absorb 0.3) were chosen on all five folds: with that choice nested as well, the refiner row is 0.4483 and the final row about 0.455",
   "stages": [
     {
       "name": "v2 single model, fixed keep rule (area >= 300, mean probability >= 0.85)",
@@ -50,49 +50,49 @@
     },
     {
       "name": "learned keep rule + written at >= 0.48 (predict_final --no-refiner)",
-      "pq_nested": 0.4539,
+      "pq_nested": 0.4537,
       "per_fold_nested": [
         0.4441,
-        0.4616,
-        0.4547,
-        0.4598,
-        0.4489
+        0.4609,
+        0.4545,
+        0.4599,
+        0.449
       ],
       "at_tau_0.25": {
         "pq": 0.4539,
         "tp": 5106,
-        "fp": 2008,
+        "fp": 2007,
         "fn": 3093
       },
       "gain_over_fixed_rule_bootstrap_5_95": [
-        0.0058,
-        0.0107
+        0.0054,
+        0.0104
       ]
     },
     {
       "name": "learned keep rule + refiner shapes (predict_final, the final pipeline)",
-      "pq_nested": 0.456,
+      "pq_nested": 0.4566,
       "per_fold_nested": [
-        0.4479,
-        0.4613,
-        0.4567,
-        0.4612,
-        0.4527
+        0.4485,
+        0.4619,
+        0.4568,
+        0.4623,
+        0.4532
       ],
       "at_tau_0.25": {
         "pq": 0.4563,
-        "tp": 5116,
+        "tp": 5118,
         "fp": 1995,
-        "fn": 3083
+        "fn": 3081
       },
       "gain_over_fixed_rule_bootstrap_5_95": [
-        0.0046,
-        0.0095
+        0.0048,
+        0.0098
       ],
       "by_records_nested": {
-        "1": 0.4572,
-        "2": 0.4677,
-        "3": 0.4472
+        "1": 0.4574,
+        "2": 0.4692,
+        "3": 0.4468
       }
     }
   ],
@@ -101,5 +101,6 @@
     "analysis/keep_fit.py",
     "analysis/keep_eval.py",
     "analysis/refine_eval.py"
-  ]
+  ],
+  "keep_rule": "src/keep.py after the 11/12 review: member descriptors symmetric in the dense models, stable ranks"
 }

@@ -60,8 +60,9 @@ def components(prob, t_lo, close, bridge=0.0):
     if n == 0:
         return lab, np.zeros((0, 3), np.float32)
     area = np.bincount(lab.ravel(), minlength=n + 1)[1:]
-    mean = ndi.mean(prob, lab, idx) / 255
-    peak = ndi.maximum(prob, lab, idx) / 255
+    with np.errstate(invalid='ignore'):          # a group without a pixel above t_lo has no mean (0 after nan_to_num)
+        mean = ndi.mean(prob, lab, idx) / 255
+        peak = ndi.maximum(prob, lab, idx) / 255
     feats = np.stack([area, np.nan_to_num(mean), np.nan_to_num(peak)], 1).astype(np.float32)
     return lab, feats
 
