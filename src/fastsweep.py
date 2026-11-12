@@ -39,12 +39,21 @@ def load(prob_paths):
     return probs, files
 
 
-def components(prob, t_lo, close):
+def components(prob, t_lo, close, bridge=0.0):
+    """Candidate instances of a probability map (0-255 scale): pixels >= t_lo, grouped into filaments.
+
+    Two pieces belong to one filament if a closing of radius `close` joins them, or (bridge > 0) if they are
+    connected through fainter pixels with probability >= bridge. Annotators draw one outline over a filament
+    whose dark pieces are linked by faint material; the bridge keeps such pieces together without making the
+    mask itself any larger. Returns the label map (only pixels >= t_lo carry a label) and per-label
+    (area, mean probability, peak probability)."""
     lo = prob >= t_lo * 255
     grp = lo
     if close > 0:
         k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * close + 1, 2 * close + 1))
         grp = cv2.morphologyEx(lo.astype(np.uint8), cv2.MORPH_CLOSE, k).astype(bool)
+    if bridge > 0:
+        grp = grp | (prob >= bridge * 255)
     lab, n = ndi.label(grp, np.ones((3, 3)))
     lab = (lab * lo).astype(np.int32)
     idx = np.arange(1, n + 1)

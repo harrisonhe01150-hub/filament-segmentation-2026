@@ -14,6 +14,9 @@ Optional config keys, all off by default (the defaults reproduce the original v2
   small_crop_p / area_weight_ref   experiment B, see CFG below
   pseudo_dir     experiment S1: also train on unlabeled frames with soft pseudo-labels from
                  scripts/make_pseudo.py (images.npy + probs_f<fold>.npy in that folder)
+  lt_dir         experiment LT (label transfer): frames taken by the same GONG site within a few minutes of a
+                 labelled training image reuse that image's annotations; each time the image is drawn, a random
+                 neighbour replaces it with probability lt_p (default 0.5). Needs frames_<size>.npy + index.json
 """
 import argparse
 import hashlib
@@ -309,6 +312,15 @@ def train_fold(fold, cfg, out_dir):
                 Y = both
         del imgs, probs
     n_train = len(X)
+    lt_frames, lt_rows = None, None
+    if cfg.get('lt_dir'):
+        # experiment LT: the sun barely changes in a few minutes (rotation < 1 px), so the annotations of a labelled
+        # image also fit its neighbouring frames; those differ only in seeing and compression. Memory-mapped, so the
+        # extra frames cost no RAM; validation and test still use the single competition image.
+        ld = Path(cfg['lt_dir'])
+        lt_frames = np.load(ld / f'frames_{S}.npy', mmap_mode='r')
+        lt_index = json.loads((ld / 'index.json').read_text())
+        lt_rows = [lt_index.get(f, []) for f in tr]
     dev = pick_device()
     pin_host = bool(cfg.get('pin_memory', os.name != 'nt'))  # see store() below
     use_b = bool(cfg.get('boundary'))
@@ -342,6 +354,9 @@ def train_fold(fold, cfg, out_dir):
         extra_info = dict(small_filaments=int(ncen.sum()), images_with_small=int((ncen > 0).sum()))
     if n_pseudo:
         extra_info['pseudo'] = n_pseudo
+    if lt_rows is not None:
+        extra_info['lt_frames'] = sum(map(len, lt_rows))
+        extra_info['lt_images'] = sum(1 for r in lt_rows if r)
     print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0, **extra_info)), flush=True)
     # cfg['seed'] fixes the fold split; train_seed only changes init/order/augmentation, so another seed
     # trains on exactly the same folds and its models can be averaged with the first
@@ -391,6 +406,13 @@ def train_fold(fold, cfg, out_dir):
             for part in idx.split(cfg.get('micro_batch') or len(idx)):
                 ic = part if on_gpu else part.cpu()
                 img = Xg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1)
+                if lt_rows is not None:
+                    for j, t in enumerate(part.tolist()):
+                        rows = lt_rows[t] if t < len(lt_rows) else []
+                        # with probability lt_p a neighbouring frame replaces the labelled image (same annotations)
+                        if rows and float(torch.rand(1, device=dev, generator=gen)) < cfg.get('lt_p', .5):
+                            pick = int(torch.randint(len(rows), (1,), device=dev, generator=gen))
+                            img[j, 0] = torch.from_numpy(np.ascontiguousarray(lt_frames[rows[pick]])).to(dev).float().div(255)
                 chans = [Yg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1)]  # mask, [outline], [weight]
                 if use_b:
                     chans.append(Bg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1))

@@ -26,7 +26,9 @@ def main():
     p.add_argument('--run', type=Path, required=True, help='folder with probs_f<k>.npz')
     p.add_argument('--folds', type=int, nargs='+', default=[0, 1])
     p.add_argument('--annotations', type=Path, default=WORK / ANN)
+    p.add_argument('--post', help='JSON overriding the post-processing, e.g. {"bridge": 0.1, "draw": 0.48}')
     a = p.parse_args()
+    post = dict(POST, **(json.loads(a.post) if a.post else {}))
     images, anns, by_file = load_coco(a.annotations)
     assigned = fold_of_files(by_file)
     total, rows = PQ(), []
@@ -36,15 +38,19 @@ def main():
         assert set(files) == {f for f, k in assigned.items() if k == fold}, f'fold {fold} files do not match the split'
         one = PQ()
         for image, prediction in zip(files, prob):
-            labels, feat = components(upsample(prediction), POST['t_lo'], POST['close'])
-            keep = (feat[:, 0] >= POST['min_area']) & (feat[:, 1] >= POST['min_mean'])
+            up = upsample(prediction)
+            labels, feat = components(up, post['t_lo'], post['close'], post.get('bridge', 0))
+            keep = (feat[:, 0] >= post['min_area']) & (feat[:, 1] >= post['min_mean'])
+            if post.get('draw', post['t_lo']) > post['t_lo']:   # written extent is tighter than the instance definition
+                labels = np.where(up >= post['draw'] * 255, labels, 0)
+                keep &= np.bincount(labels.ravel(), minlength=len(feat) + 1)[1:] > 0
             remap = np.zeros(len(feat) + 1, np.int32)
             remap[1:][keep] = np.arange(1, int(keep.sum()) + 1)
             recs = [[np.flatnonzero(ann_mask(an)).astype(np.int32) for an in anns[r]] for r in by_file[image]]
             one.merge(score_file(remap[labels], recs, PQ()))
         total.merge(one)
         rows.append(dict(fold=fold, images=len(files), pq=round(one.value, 4), tp=one.tp, fp=one.fp, fn=one.fn))
-    print(json.dumps(dict(run=str(a.run), folds=rows, combined_pq=round(total.value, 4), post=POST), indent=2))
+    print(json.dumps(dict(run=str(a.run), folds=rows, combined_pq=round(total.value, 4), post=post), indent=2))
 
 
 if __name__ == '__main__':
