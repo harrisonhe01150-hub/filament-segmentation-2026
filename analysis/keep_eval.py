@@ -29,7 +29,7 @@ from postproc import score_file, upsample
 from predict_final import FINAL
 
 GT_INDEX = WORK / 'scratch/bank/gt_index.pkl'      # written by analysis/tree_bank.py from the TRAIN annotations
-TAUS = (0.20, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28)
+TAUS = (0.20, 0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28)
 
 
 def pq_of(a):
@@ -44,6 +44,7 @@ def main():
     ap.add_argument('--pred', type=Path, help='refiner predictions pred_f<k>.npz (shape refine)')
     ap.add_argument('--members', help='JSON list of two {fold: run folder} maps (shape draw)')
     ap.add_argument('--out', type=Path, help='write the per-image parts here (json)')
+    ap.add_argument('--strict-taus', type=float, nargs=5, help='thresholds per fold from keep_fit.py (strict_taus): also report them')
     a = ap.parse_args()
     with np.load(a.scores, allow_pickle=False) as z:
         sfile, slabel, sfold, sscore = z['fname'].astype(str), z['label'], z['fold'], z['score']
@@ -111,8 +112,16 @@ def main():
     diff = np.array([pq_of(nested[d].sum(0)) - pq_of(P['rule'][d].sum(0)) for d in draws])
     per_fold = [round(pq_of(nested[fold == k].sum(0)), 4) for k in range(5)]
     rule_fold = [round(pq_of(P['rule'][fold == k].sum(0)), 4) for k in range(5)]
+    strict = None
+    if a.strict_taus:
+        strict = np.zeros_like(P['rule'])
+        for k in range(5):
+            strict[fold == k] = P[f'{a.strict_taus[k]:.2f}'][fold == k]
     print(json.dumps(dict(
         shape=a.shape, nested=round(pq_of(nested.sum(0)), 4), fixed_rule=round(pq_of(P['rule'].sum(0)), 4),
+        at_tau_0_25=round(pq_of(P['0.25'].sum(0)), 4),
+        strict_nested=None if strict is None else round(pq_of(strict.sum(0)), 4),
+        strict_per_fold=None if strict is None else [round(pq_of(strict[fold == k].sum(0)), 4) for k in range(5)],
         gain=round(pq_of(nested.sum(0)) - pq_of(P['rule'].sum(0)), 4), taus=chosen, per_fold=per_fold, fixed_rule_per_fold=rule_fold,
         folds_better=int(sum(x > y for x, y in zip(per_fold, rule_fold))),
         by_records={int(r): [round(pq_of(nested[recs == r].sum(0)), 4), round(pq_of(P['rule'][recs == r].sum(0)), 4)] for r in (1, 2, 3)},
