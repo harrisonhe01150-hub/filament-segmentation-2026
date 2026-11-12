@@ -9,8 +9,9 @@
 - **本地五折折外分数从 0.4409 提到 0.4566**（官方自评口径，严格嵌套）。主要来自一个新的「学习型留/删规则」（K1），其次是逐条细化轮廓。两路独立复核都确认收益是真的。
 - **线上还没验证。** 两份候选文件会在 **11/13 00:02 UTC（11/12 18:02 CST）** 从 Harrison 的电脑自动提交（先轻量版、再完整版，占当天 5 次里的 2 次）。目前线上最好是 0.39、第 331 名。
 - **代码都在 PR #10 里**（包含 PR #9 的全部提交），还没合进 `main`。
-- **权重文件（7 个，约 370 MB）还只在 Harrison 的电脑上**，没进仓库。最终 notebook 需要它们，见第 5 节。
-- **剩下要做的**（第 3 节）：看今晚的线上结果 → 定最终流程 → 权重进仓库、跑一遍最终 notebook → 合并 PR → 报告 → 选两份最终提交 → 仓库公开 → 填表单。
+- **权重文件（7 个，约 370 MB）已提交进本分支的 `weights/`**，拉下分支就能跑最终 notebook。
+- **文件在哪**：第 5 节（GitHub、仓库里、只在 Harrison 电脑上、Kaggle 上）。
+- **剩下要做的**（第 3 节）：看今晚的线上结果 → 定最终流程 → 跑一遍最终 notebook → 合并 PR → 报告 → 选两份最终提交 → 仓库公开 → 填表单。
 
 ## 1. 截止时间
 
@@ -85,11 +86,11 @@ PR #10 里的关键文件：
 
 1. **看今晚的线上结果**（11/13 00:40 UTC 后）。
    - 在 My Submissions 里读两份的显示分；下载榜单看名次（Kaggle CLI：`kaggle competitions leaderboard -c filament-segmentation-2026 --download`），和第 331 名比。
-   - 写进 `EXPERIMENTS.md` 最后的提交记录和 `results/evidence/LIVE_SUBMISSIONS.json`。
+   - 写进 `EXPERIMENTS.md` 最后的提交记录，并补全 `results/evidence/LIVE_SUBMISSIONS.json`（目前只记到 10/23，11/12 的 5 份和今晚的 2 份都没记）。
 2. **定最终流程**：完整版（K1 + 细化）还是轻量版（K1 + 收紧）。
    - 本地完整版高 0.003；代价是多 5 个细化网络（每个 41 MB）和多一段代码。
    - 建议：线上两份差不多时用完整版；轻量版明显更好再换。不要因为 ±0.004 以内的线上差别推翻本地结论。
-3. **权重进仓库**（第 5 节）。放到 `weights/` 下，文件名和 SHA256 按 `weights/README.md`。用轻量版就只要两个主模型 + `keep_table.npz`。
+3. **权重已在仓库里**（`weights/`，SHA256 见 `weights/README.md`；拉下后可用 `sha256sum weights/*` 核对）。最后定了轻量版的话，可以把 5 个 `refiner_f*.pt` 从 `main` 上删掉，也可以留着。
 4. **跑一遍最终 notebook 并提交带输出的版本**。
    - 在有权重的机器上跑 `notebooks/end_to_end_final.ipynb`（180 张图，`FP32 = True`，RTX 5070 Ti 上约 7 分钟，CPU 上约 70 分钟），保存带输出的 notebook 提交。
    - 用 `python analysis/compare_csv.py outputs/submission_final.csv <提交过的那份>` 逐条比，每条掩码 IoU ≥ 0.999 就算复现。
@@ -118,21 +119,80 @@ PR #10 里的关键文件：
 - **代码**：`docs/handoff_1112/k2_snapshot/`（`candidate.py` 是整合好的类，`feats.py` 是 66 个描述量）。这是快照，**原样跑不起来**：它们引用 Harrison 电脑上的 `scratch/` 路径和缓存。
 - **建议**：只在第 3 节都做完、还有一天以上时再做；做的话照 `EXPERIMENTS.md` 的规矩先预登记。
 
-## 5. 只在 Harrison 电脑上的东西（不在 git 里）
+## 5. 所有文件在哪
 
-| 东西 | 路径（仓库根目录下） | 大小 | 谁需要 |
+### 5.1 GitHub
+
+- 仓库：https://github.com/harrisonhe01150-hub/filament-segmentation-2026（**私有**）。
+- 本次工作在分支 `harrison/final-sprint`，PR #10（含 PR #9）。`main` 还停在 a4f153d。
+- 拉取：`git fetch origin && git checkout harrison/final-sprint`。权重在这个分支上，约 370 MB，第一次拉要几分钟。
+
+### 5.2 仓库里（git 跟踪，拉下分支就有）
+
+| 位置 | 内容 |
+|---|---|
+| `HANDOFF.md`、`CLAUDE.md` | 本交接；给 Claude 的入口 |
+| `README.md`、`PLAN.md`、`TEAM_ROLES.md` | 比赛说明、计划、分工 |
+| `EXPERIMENTS.md` | 全部实验的预登记、结果和提交记录 |
+| `src/predict_final.py` | **最终流程**，一条命令从权重到 CSV |
+| `src/keep.py` | 学习型留/删规则 |
+| `src/refine.py` | 候选库、逐条细化网络、贴回 |
+| `src/train_seg.py`、`src/predict.py`、`src/make_submission.py` | 主模型训练、v2 预测、CSV 写出（含后处理组合 `POST_STACK`） |
+| `src/fastsweep.py`、`src/postproc.py`、`src/common.py` | 候选分组（含弱连接 `bridge`）、上采样和计分、官方口径 PQ |
+| `src/treeselect.py`、`src/grouppost.py` | 没通过的候选树决策层、旧后处理实验（保留不用） |
+| `analysis/keep_*.py` | 留/删规则：描述量表、交叉拟合评估、真实标签图评估 |
+| `analysis/refine_*.py` | 细化网络：候选库、训练和应用、评估 |
+| `analysis/tree_bank.py` | 候选树实验；也提供 `gt_index()`（训练标注的像素索引，其他脚本会自动调用） |
+| `analysis/score_folds.py`、`compare_csv.py`、`diagnose.py`、`report_figs.py` 等 | 折外计分、两份 CSV 逐条比较、漏检诊断、报告图 |
+| `scripts/build_notebook_final.py` → `notebooks/end_to_end_final.ipynb` | 最终流程的 notebook（**仓库里这份没有输出**） |
+| `scripts/build_notebook.py` → `notebooks/end_to_end.ipynb` | v2 基线的 notebook |
+| `notebooks/Solar_UNet_Team_Reproduction.ipynb` | 早期的团队复现 notebook |
+| `scripts/update_manifest.py`、`SOURCE_MANIFEST.json` | 文件哈希清单（notebook 第一格核对） |
+| `scripts/fetch_gong.py`、`make_pseudo.py`、`fetch_neighbors.py`、`build_lt_frames.py` | S1 自训练和 LT 相邻帧实验的数据脚本（都没通过） |
+| `configs/` | 训练配置：`v2.json`（第 0、1 折）、`v2b.json`（第 2–4 折）、`v2_full.json`、`v2_full_s2027.json`（最终用的两个全量模型）、其余是实验 |
+| `weights/` | **最终流程的全部文件**：`model_full_s2026.pt`、`model_full_s2027.pt`（主模型，各 82 MB）、`refiner_f0..4.pt`（细化网络，各 41 MB）、`keep_table.npz`（留/删训练表，1 MB）；`weights/README.md` 有来源和 SHA256 |
+| `docs/FINAL_PIPELINE_zh-CN.md` | 最终流程的大白话说明（答辩用） |
+| `docs/handoff_1112/reports/` | K1 两路复核、代码审查 13 条、三路探索、K2 复核的报告原文 |
+| `docs/handoff_1112/k2_snapshot/` | K2 代码快照（原样跑不起来，见第 4 节） |
+| `docs/BASELINE_AND_PROVENANCE.txt`、`docs/INTEGRATION_zh-CN.txt` | v2 基线的来源说明 |
+| `report/reproducibility.md`、`report/figures/` | 报告「可复现性」草稿；v2 的诊断图 |
+| `results/evidence/` | 小型结果摘要：`final_sprint_1112/SUMMARY.json`（折外分数阶梯）、`full_v2_oof/`、`LIVE_SUBMISSIONS.json`（**只记到 10/23，需要补**）等 |
+| `tests/` | 4 个 CPU 自检 |
+| `requirements*.txt` | 固定版本的依赖（含 scikit-learn、notebook 内核） |
+
+### 5.3 只在 Harrison 电脑上（被 `.gitignore` 忽略，不在 GitHub）
+
+都在 `C:\Users\harri\code\filament-segmentation-2026\` 下面。做第 3 节的事**只可能用到前两行**；其余是重算本地分数、重做实验用的，需要时找 Harrison 要。
+
+| 位置 | 大小 | 内容 | 什么时候需要 |
 |---|---|---|---|
-| 最终流程的 7 个权重 | `weights/model_full_s2026.pt`、`model_full_s2027.pt`、`refiner_f0..4.pt` | 82 MB × 2、41 MB × 5 | **最终 notebook、复现** |
-| 两份候选提交 CSV（各 1163 条） | `scratch/sub_1113/final/K1_refine_fp32.csv`、`K1_light_fp32.csv` | 各 0.3 MB | 自动提交失败时手动提交；有权重也可以用第 7 节的命令重新生成 |
-| 已提交的组合版 CSV | `scratch/sub_1112/full2_stack_b01_d048.csv` | 0.3 MB | 不需要（Kaggle 上能直接选） |
-| 测试集主模型概率图（float32） | `scratch/sub_1113/dense_fp32/dense_0.npz`、`dense_1.npz` | 小 | `predict_final.py --probs` 快速重算 |
-| 全部折外概率图 | `runs/v2*`、`runs/v2b*`、`runs/v2_5070ti`、`runs/v2b_5070ti`、`runs/v2_s2028_5070ti` 等 | 2.4 GB | 重算折外分数、重建留/删训练表 |
-| 候选库（含小图） | `scratch/ws/main/rbank/kc_bridge`（训练）、`test_full2_bridge`（测试） | 2 GB | 同上 |
-| 折外细化预测 | `scratch/ws/main/kcb/pred/pred_f*.npz` | 小 | `keep_eval.py --shape refine` |
-| 留/删描述量表和折外分数 | `scratch/keep/oof/`、`scratch/keep/test/` | 小 | `keep_fit.py`、`keep_eval.py` |
-| 第三个全量模型（M3，没通过，不用） | `runs/v2_full_s2028_5070ti` | 82 MB | 不需要 |
+| `scratch/sub_1113/final/K1_light_fp32.csv`、`K1_refine_fp32.csv` | 各 0.3 MB | **今晚自动提交的两份**（各 1163 条） | 自动提交没成功、要手动交时（有权重也可以用第 7 节命令重新生成） |
+| `scratch/sub_1113/SUBMIT_LOG.json`、`lb_before/`、`lb_after_*/` | 小 | 自动提交的日志和每次提交后下载的榜单 | 记提交结果时 |
+| `scratch/sub_1112/` | 2 MB | 11/12 已交的 5 份（`full2_stack_b01_d048.csv` 是目前最好的 0.39） | 一般不需要（Kaggle 上能直接选） |
+| `scratch/sub_1113/` 其余文件 | 11 MB | 中间版本的候选、`dense_fp32/`（测试集两个主模型的 float32 概率图）、CPU 复现日志 | 不需要 |
+| `data/MAGFiLO_1.0_Kaggle_2026/` | 0.7 GB | 比赛数据（每人用自己的 Kaggle 账号下载） | 每人自己下 |
+| `data/gong_unlabeled/`、`data/pseudo_s1/` | 1.2 GB、4.5 GB | S1 自训练用的无标注 GONG 图和伪标注（没通过） | 不需要 |
+| `data/lt_frames/`、`data/lt_probe/` | 6.5 GB | LT 相邻帧实验的数据（没通过） | 不需要 |
+| `runs/v2/`、`runs/v2b/` | 0.4 GB | 原 v2 的 5 个折模型和折外概率图（Kaggle 训练，来自 Zichang 的交接包） | 重算折外分数 |
+| `runs/v2_5070ti/`、`runs/v2b_5070ti/` | 0.4 GB | 第二套 5 个折模型和折外概率图（5070 Ti，同配方） | 同上；两套平均是最终流程的折外依据 |
+| `runs/v2_full_5070ti/`、`runs/v2_full_s2027_5070ti/` | 各 81 MB | 两个全量模型（= `weights/model_full_*.pt`）和它们的测试集概率图 | 已复制进 `weights/` |
+| `runs/v2_s2028_5070ti/`、`runs/v2_full_s2028_5070ti/` | 0.5 GB | 第三套模型（M3，没通过） | 不需要 |
+| `runs/S1_5070ti/`、`R1_2048_5070ti/`、`B1/B2/B3_5070ti/`、`LT_5070ti/`、`ms1344_k/`、`ms1728_k/` | 各约 0.1–0.2 GB | 没通过的实验的模型和折外概率图 | 不需要 |
+| `runs/GPU_QUEUE.json`、`runs/*.log` | 小 | 显卡任务队列的记录 | 不需要 |
+| `scratch/ws/main/rbank/kc_bridge/`、`test_full2_bridge/` | 2 GB | 最终流程的候选库（训练折外 6788 个候选、测试 1727 个，含小图） | 重算留/删或细化的折外分数 |
+| `scratch/ws/main/kcb/pred/` | 小 | 细化网络对折外候选的预测 | `keep_eval.py --shape refine` |
+| `scratch/keep/oof/`、`scratch/keep/test/` | 小 | 留/删描述量表、交叉拟合分数、评估结果（`oof_v1/`、`test_v1/` 是修正前的版本，`oof_sym2/`、`oof_m3/` 是 M3 实验） | `keep_fit.py`、`keep_eval.py` |
+| `scratch/ws/refine/run1/`、`run_kept/` | 1.7 GB（整个 `refine/`） | 细化网络的训练输出（`run1/refiner_f0..4.pt` = `weights/refiner_f*.pt`），`RESULTS.md` 是细化实验的详细记录 | 一般不需要 |
+| `scratch/ws/main/` 其余 | 约 2 GB | Harrison 的实验脚本和中间结果（组合后处理、合并碎片、多尺度、M3 等）、自动提交脚本 `submit_1113.py` | 不需要 |
+| `scratch/ws/k1_audit/`、`k1_reimpl/`、`x_*/` | 共约 0.2 GB | 复核、审查、探索各路的工作目录（报告已复制到 `docs/handoff_1112/`） | 做 K2 时可能需要 `x_keepmodel/`、`k1_reimpl/` |
+| `scratch/bank/` | 95 MB | `gt_index.pkl`（训练标注像素索引，缺了会自动重建）和候选树实验的库 | 不需要 |
+| 其他 `scratch/*` | — | 冒烟测试、旧的探测、临时目录 | 不需要 |
 
-**只做第 3 节的事，只需要第一行的权重。** 其余是重算本地分数用的。`scratch/bank/gt_index.pkl`（训练标注的像素索引）缺了会自动重建（约 2 分钟）。
+### 5.4 Kaggle 上
+
+- 队伍 "Zichang Lu" 的全部提交在比赛页的 My Submissions 里（11/12 的 5 份和今晚的 2 份都在这里）。最终 2 份在那里手动勾选。
+- 原 v2 的折模型最早在 Zichang 的私有 notebook `zichanglu/solar-seg-v2`、`solar-seg-v2b` 里（`runs/v2`、`runs/v2b` 就是从那里下的）。
+- 11/07 那次「refactored notebook」提交引用的 commit 13a18c432efb 不在本仓库，应该在交的人自己那里。
 
 ## 6. 规矩和坑（队友的 Claude 务必遵守）
 
@@ -141,7 +201,7 @@ PR #10 里的关键文件：
 - 每个实验先在 `EXPERIMENTS.md` 写好假设和通过标准再跑；通过标准是五折嵌套 ≥ +0.005、至少 4 折变好（今天的 K1 是事后补记，已注明并复核）。
 - 不要把 Kaggle token、`.env` 写进任何文件或提交。
 - **仓库公开前想清楚时机**：`PLAN.md` 写 11/13 公开，`README.md` 写「at competition close」。权重 + 代码一公开，别人在截止前就能直接复现我们的分数。先确认 Overview 的原话；如果允许，建议 11/15 06:00 UTC 提交截止后再公开、再填表。公开前查一遍提交历史里没有密钥。
-- `weights/` 下的大文件现在是未跟踪状态，**不要 `git add -A`**；按文件名加。
+- 仓库里的 `scratch/`、`runs/` 是忽略的，但不要用 `git add -A` 一把加，按文件名加。
 - Windows 上跑 CPU 任务：设 `OPENBLAS_NUM_THREADS=1`（否则每个 numpy/scipy 进程先占约 1.5 GB 提交内存，多开几个会把同机的 GPU 训练挤死）；一次别开超过 6 个进程。
 - 生成提交文件用 `--fp32`。CUDA 默认 float16，会让几个卡在阈值边上的候选进出。
 - Windows 写出的 CSV 是 CRLF 换行，Kaggle 接受；比较两份 CSV 用 `analysis/compare_csv.py` 按掩码比，不要比文件哈希。

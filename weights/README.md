@@ -1,10 +1,9 @@
 # weights/
 
-Files the final pipeline (`src/predict_final.py`) reads. Only `keep_table.npz` is committed so far; the network
-weights are copied here at the model freeze (they are large, and which pipeline is final is decided after the
-last leaderboard checks).
+Files the final pipeline (`src/predict_final.py`, `notebooks/end_to_end_final.ipynb`) reads. All of them are
+committed (2026-11-12). Check them after a clone with `sha256sum weights/*` against the table.
 
-| File here | Made by | Local source on the training machine | Size | SHA256 |
+| File here | Made by | Copied from (training machine) | Size | SHA256 |
 |---|---|---|---|---|
 | `keep_table.npz` | `analysis/keep_fit.py --table` (6788 seeds x 50 descriptors from 2 member models, labels from the TRAIN annotations) | committed | 1.0 MB | `e2d35e8a87ff90297d996c4070f836f98e32a16d8c9174014447a4c8adaf030a` |
 | `model_full_s2026.pt` | `src/train_seg.py --config configs/v2_full.json` (all 707 images, seed 2026) | `runs/v2_full_5070ti/model_f-1.pt` | 81.7 MB | `ad5647c7f69f2541a5d91140c6d03b956775bb9d3fc5bc9e2ee6af3529bfbdec` |
