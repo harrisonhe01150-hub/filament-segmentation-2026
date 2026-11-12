@@ -4,9 +4,13 @@
                               [--scores scratch/keep/oof/scores.npz] [--table weights/keep_table.npz]
 
 The seeds of fold k are scored by a model fitted on the seeds of the other four folds (whose probability maps are
-out of fold too), and the threshold tau is chosen per fold on the other four folds ("nested"), so the reported PQ
-is honest. PQ here is exact for stage-1 masks: a kept seed adds its matched IoU per record; a seed can match at
-most one filament of a record with IoU > 0.5 and the seeds are disjoint, so the seeds can be summed independently.
+out of fold too). The threshold tau is chosen in two ways, both reported:
+  nested         per fold, on the other four folds, from the same cross-fitted scores. Those scores come from
+                 models that saw fold k's labels, so this is slightly optimistic (about 0.001 here).
+  strict nested  per fold, from an inner cross-fit among the other four folds that never touches fold k.
+PQ is computed from the stored IoU of every seed with every record (stage-1 masks): a kept seed adds its matched
+IoU per record, and the seeds are disjoint, so they can be summed independently. This agrees with scoring real
+label maps except when one seed matches two overlapping filaments of the same record (1 seed in 6788: one TP).
 analysis/keep_eval.py repeats the comparison on real label maps, with the final mask shapes.
 
 --scores writes the cross-fitted score of every seed (bank order) for keep_eval.py.
@@ -77,6 +81,18 @@ def main():
         j = int(np.argmax([pq(p[ifold != k].sum(0)) for p in per_tau]))
         chosen.append(float(TAUS[j]))
         nested[ifold == k] = per_tau[j][ifold == k]
+    # strict nesting: the threshold for fold k comes from scores that models without any fold-k seed produced
+    strict, strict_taus = base.copy(), []
+    for k in range(5):
+        inner = np.zeros(len(X))
+        for j in range(5):
+            if j != k:
+                tr = (fold != k) & (fold != j)
+                inner[fold == j] = keep.fit(X[tr], u[tr], R[tr]).predict(X[fold == j])
+        others = ifold != k
+        best = max(TAUS, key=lambda t: pq(per_image((inner > t) & (fold != k))[others].sum(0)))
+        strict_taus.append(float(best))
+        strict[ifold == k] = per_image(score > best)[ifold == k]
     rng = np.random.default_rng(0)
     draws = rng.integers(0, len(images), (2000, len(images)))
     diff = np.array([pq(nested[d].sum(0)) - pq(base[d].sum(0)) for d in draws])
@@ -84,6 +100,8 @@ def main():
     result = dict(
         seeds=len(X), descriptors=X.shape[1], fixed_rule=round(pq(base.sum(0)), 4), nested=round(pq(nested.sum(0)), 4),
         gain=round(pq(nested.sum(0)) - pq(base.sum(0)), 4), taus=chosen,
+        strict_nested=round(pq(strict.sum(0)), 4), strict_gain=round(pq(strict.sum(0)) - pq(base.sum(0)), 4), strict_taus=strict_taus,
+        strict_per_fold=[round(pq(strict[ifold == k].sum(0)), 4) for k in range(5)],
         per_fold=[round(pq(nested[ifold == k].sum(0)), 4) for k in range(5)],
         fixed_rule_per_fold=[round(pq(base[ifold == k].sum(0)), 4) for k in range(5)],
         by_records={int(r): [round(pq(nested[n_rec == r].sum(0)), 4), round(pq(base[n_rec == r].sum(0)), 4)] for r in (1, 2, 3)},

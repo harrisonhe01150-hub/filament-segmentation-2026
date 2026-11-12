@@ -11,8 +11,8 @@ the seed's contribution to the numerator of PQ per record. PQ = sum(matched IoU)
 and keeping a seed adds u to the numerator and 1/2 to the denominator (per record), so keeping pays exactly when
 u > PQ / 2. One threshold TAU on the predicted u is therefore the whole decision rule.
 
-Out of fold (model for fold k trained on the other folds, TAU chosen on the other folds) this is +0.008 PQ over
-the fixed rule on the same seeds and masks; see EXPERIMENTS.md ("K1").
+Out of fold (model for fold k trained on the other folds, threshold chosen without fold k) this is about +0.007 PQ
+over the fixed rule on the same seeds and masks; see EXPERIMENTS.md ("K1") and analysis/keep_fit.py.
 
 Nothing here uses annotations except `target`, which is only called on training images to make the labels.
 """
@@ -21,7 +21,11 @@ import numpy as np
 
 import refine
 
-TAU = 0.25                          # keep a seed when its predicted u is above this (about PQ / 2)
+# Keep a seed when its predicted u is above TAU. PQ / 2 of the training folds is about 0.23, and out of fold every
+# value from 0.22 to 0.25 scores the same within noise (analysis/keep_fit.py prints the curve). 0.25 is the upper
+# end of that range: on the public leaderboard PQ is about 0.88 of the out-of-fold value because fewer predictions
+# find a partner in the test annotations, which makes a false positive relatively more costly there.
+TAU = 0.25
 GBM = dict(max_iter=300, learning_rate=0.03, max_depth=4, min_samples_leaf=30, l2_regularization=1.0, random_state=0)
 NEIGHBOUR_RADIUS = 150.0            # px between seed centres that counts as "near"
 NAMES = ('area', 'log_area', 'mean', 'long', 'short', 'aspect', 'scale', 'fill',
