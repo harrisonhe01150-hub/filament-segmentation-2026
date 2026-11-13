@@ -37,9 +37,10 @@ notebook end to end (Oct 24). A clean-clone run on a different machine (Apple MP
 CSV with IoU ≥ 0.999. Result (Nov 12, final pipeline, fresh clone and environment on an Apple-silicon Mac, MPS,
 float32): 1163 filaments, the same count as the submitted file; 1161 match, 2 borderline candidates leave and 2 enter;
 matched masks differ by a median of 1 pixel (mean IoU 0.9989, 99.3% at IoU ≥ 0.99, 63.6% at ≥ 0.999, minimum 0.969;
-light variant: mean 0.9996, all ≥ 0.99, 86.1% ≥ 0.999). The strict criterion is not met on MPS: its float32 dense maps
-differ from the CUDA ones in the last bits, which moves edge pixels at the 0.48 / 0.5 thresholds
-(**TBD**: Mac CPU run). GPU training itself is not bit-for-bit
+light variant: mean 0.9996, all ≥ 0.99, 86.1% ≥ 0.999). The strict criterion is not met on the Mac. The Mac CPU run
+(float32, 3 h 56 min) gives exactly the masks of the Mac MPS run (all 1163 at IoU 1.0), so the difference comes from
+the machine and not from the GPU; with the baseline we traced the same effect to OpenCV's resize rounding differently
+on Apple silicon and on x86. GPU training itself is not bit-for-bit
 deterministic, which is why the weights are part of the repository.
 
 **Metric.** Our local PQ implementation follows the organizers' self-evaluation notebook (IoU > 0.5 pairs are true

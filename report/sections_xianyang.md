@@ -148,5 +148,7 @@ same count as the submitted files (RTX 5070 Ti, float32). On the Apple GPU (MPS,
 match a submitted one; 2 borderline candidates leave and 2 enter. The matched masks differ by a few edge pixels
 (median 1 px, 95th percentile 5 px): mean IoU 0.9989, 99.3% of masks at IoU >= 0.99, 63.6% at >= 0.999, minimum
 0.969. For the light variant: mean IoU 0.9996, all masks >= 0.99, 86.1% >= 0.999. The strict criterion (every mask
-at IoU >= 0.999) is therefore not met on MPS; the differences are float rounding of the dense maps at the 0.48 / 0.5
-thresholds. **TBD:** the same comparison for the Mac CPU run (float32).
+at IoU >= 0.999) is therefore not met on the Mac. The cause is the machine, not the GPU: the Mac CPU run (float32,
+3 h 56 min) gives exactly the same 1163 masks as the Mac MPS run (every mask IoU 1.0), so both differ from the
+submitted file in the same way. We had seen the same effect with the baseline: OpenCV's image resize rounds
+differently on Apple silicon and on x86, which moves pixels that sit on the 0.48 / 0.5 thresholds.
