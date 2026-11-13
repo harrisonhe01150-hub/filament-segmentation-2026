@@ -1,8 +1,11 @@
-# Test-set files of the final pipeline (submitted 2026-11-13 00:02 UTC)
+# Test-set files of the final pipeline (submitted 2026-11-13 00:02 and 00:06 UTC)
 
 Copies of the two files the scheduled submitter on Harrison's machine sends to Kaggle
 (`scratch/sub_1113/final/`, made 2026-11-12 with the code of commit bec108b, float32 on the RTX 5070 Ti;
 EXPERIMENTS.md, "code review"). Each has 1163 filaments on the 180 test images.
+
+Public leaderboard (2026-11-13 00:06 UTC, 1504 teams): both display 0.40; full rank 210, light rank 219
+(our best before was 0.39, rank 334). EXPERIMENTS.md, last section.
 
 | File | Variant | SHA256 |
 |---|---|---|
