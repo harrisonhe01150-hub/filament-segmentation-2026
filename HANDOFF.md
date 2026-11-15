@@ -5,15 +5,16 @@
 > 时间一律写 UTC，括号里是美国中部时间（CST = UTC−6，11 月 1 日后已是冬令时）。
 > 11/12 22:55 UTC 补：今晚两份测试集 CSV 的副本放进了 `results/test_submissions_1113/`；最终流程在训练图上的折外预测放进了 `results/oof_final/`（画报告图用，不需要 2 GB 候选库）。
 > 11/13 00:11 UTC 补：两份 K1 都已线上出分，**都显示 0.40，名次 334 → 210**（完整版；轻量版 219）。第 3 节第 1、2 步已完成。
+> 11/15 04:05 UTC 补：**仓库已公开**（04:01 UTC，Harrison 决定：提交需要公开链接）；4 个自检通过后 **PR #10 已合并进 `main`**（PR #9 一起）。队友的 PR #11 原来以 `harrison/final-sprint` 为基，要改成以 `main` 为基再合。
 
 ## 0. 一分钟版
 
 - **本地五折折外分数从 0.4409 提到 0.4566**（官方自评口径，严格嵌套）。主要来自一个新的「学习型留/删规则」（K1），其次是逐条细化轮廓。两路独立复核都确认收益是真的。
 - **线上已验证**：11/13 00:02 / 00:06 UTC 自动提交的两份都显示 **0.40**（第一次上 0.40）。完整版第 **210** 名、轻量版第 219 名（提交前第 334 名，共 1504 队）。
-- **代码都在 PR #10 里**（包含 PR #9 的全部提交），还没合进 `main`。
+- **代码已在 `main` 上**：PR #10（包含 PR #9 的全部提交）11/15 合并。仓库 11/15 04:01 UTC 起公开。
 - **权重文件（7 个，约 370 MB）已提交进本分支的 `weights/`**，拉下分支就能跑最终 notebook。
 - **文件在哪**：第 5 节（GitHub、仓库里、只在 Harrison 电脑上、Kaggle 上）。
-- **剩下要做的**（第 3 节）：（看线上结果、定最终流程已完成：用完整版）跑一遍最终 notebook → 合并 PR → 报告 → 选两份最终提交 → 仓库公开 → 填表单。
+- **剩下要做的**（第 3 节）：（看线上结果、定最终流程已完成：用完整版）跑一遍最终 notebook → 报告 → 选两份最终提交 → 填表单（合并 PR、仓库公开已完成）。
 
 ## 1. 截止时间
 
@@ -21,7 +22,7 @@
 |---|---|---|
 | Kaggle 提交 | 2026-11-15 06:00 UTC（11/15 00:00 CST） | Zichang |
 | 在 Kaggle 上手动选 2 份最终提交 | 同上，**必须手动选** | Zichang |
-| 仓库公开 | 计划 11/13（见第 6 节的风险提示） | Harrison 原计划 |
+| 仓库公开 | **已公开**（11/15 04:01 UTC） | Harrison |
 | Google 表单（报告 PDF + 仓库链接） | README 写的是 11/15 23:59 美国中部时间；计划 11/14 交 | Zichang |
 | 每天提交额度 | 全队共 5 次，00:00 UTC（18:00 CST）重置 | — |
 
@@ -63,9 +64,9 @@
 
 | 分支 / PR | 内容 | 状态 |
 |---|---|---|
-| `main`（a4f153d） | v2 基线、PR #7 之前的一切 | |
+| `main` | PR #10 合并后包含下面全部工作（合并前停在 a4f153d） | |
 | PR #9 `harrison/s1-self-training` | S1 自训练、R1 2048（都没通过）、全量模型记录 | 开着；被 #10 包含 |
-| **PR #10 `harrison/final-sprint`** | 本次全部工作，最新 commit 见 PR | 开着，等合并 |
+| **PR #10 `harrison/final-sprint`** | 本次全部工作 | **已合并**（11/15，合并前跑过 4 个自检） |
 | PR #6、#8（smyll / codex） | A1 中心线（没通过）的记录 | 开着，没动 |
 
 PR #10 里的关键文件：
@@ -96,7 +97,7 @@ PR #10 里的关键文件：
    - 在有权重的机器上跑 `notebooks/end_to_end_final.ipynb`（180 张图，`FP32 = True`，RTX 5070 Ti 上约 7 分钟，CPU 上约 70 分钟），保存带输出的 notebook 提交。
    - 用 `python analysis/compare_csv.py outputs/submission_final.csv results/test_submissions_1113/K1_refine_fp32.csv`（轻量版比 `K1_light_fp32.csv`）逐条比，每条掩码 IoU ≥ 0.999 就算复现。
    - 用轻量版的话，把 notebook 的 `USE_REFINER` 改成 `False` 再跑。
-5. **合并 PR #10 进 `main`**（会顺带合进 #9）。合之前跑一遍 `tests/` 下 4 个脚本和 `python scripts/update_manifest.py`（notebook 第一格会核对文件哈希）。
+5. ~~合并 PR #10 进 `main`~~ **已完成**（11/15；合并前 4 个自检全部通过，文件哈希清单已更新）。之后再改 `src/` 等代码，仍要跑 `python scripts/update_manifest.py`。
 6. **报告**（4 页，官方 Overleaf 模板；分工见 `TEAM_ROLES.md` 第 7 节）。
    - 方法：照 `docs/FINAL_PIPELINE_zh-CN.md` 写（三步：主模型 + 候选 → 学习型留/删 → 逐条细化）。
    - 结果：折外分数阶梯用 2.1 节的表或 `SUMMARY.json`；按 1/2/3 人标注拆开的分数在 `EXPERIMENTS.md` K1 一节。
@@ -106,7 +107,7 @@ PR #10 里的关键文件：
 7. **在 Kaggle 上选 2 份最终提交**（11/15 06:00 UTC 前，手动）。
    - 私榜是另外 50% 的测试图，要按本地折外分选，不要按公开榜的小差别选。
    - 建议（11/13 线上结果出来后）：**两份都选 K1**：`K1_refine_fp32.csv`（完整版，本地 0.4566，线上 0.40，第 210 名）和 `K1_light_fp32.csv`（轻量版，本地 0.4537，线上 0.40，第 219 名）。原来留作保险的 `full2_stack_b01_d048.csv` 本地（0.4456）和线上（0.39）都比这两份低；如果想要一份不依赖留/删模型的保险，就用它换掉轻量版。
-8. **仓库公开**，然后**填 Google 表单**（报告 PDF + 仓库链接）。
+8. ~~仓库公开~~ **已完成**（11/15 04:01 UTC）。剩下**填 Google 表单**（报告 PDF + 仓库链接 https://github.com/harrisonhe01150-hub/filament-segmentation-2026 ）。README 写的是要一直公开到公布获奖名单。
 
 ## 4. 可选：K2（再 +0.002，已复核，没并入）
 
@@ -124,9 +125,9 @@ PR #10 里的关键文件：
 
 ### 5.1 GitHub
 
-- 仓库：https://github.com/harrisonhe01150-hub/filament-segmentation-2026（**私有**）。
-- 本次工作在分支 `harrison/final-sprint`，PR #10（含 PR #9）。`main` 还停在 a4f153d。
-- 拉取：`git fetch origin && git checkout harrison/final-sprint`。权重在这个分支上，约 370 MB，第一次拉要几分钟。
+- 仓库：https://github.com/harrisonhe01150-hub/filament-segmentation-2026（**11/15 04:01 UTC 起公开**；公开前查过所有分支的历史，没有密钥和比赛数据）。
+- 本次工作原在分支 `harrison/final-sprint`（PR #10，含 PR #9），11/15 已合并进 `main`。
+- 拉取：`git fetch origin && git checkout main && git pull`。权重约 370 MB，第一次拉要几分钟。
 
 ### 5.2 仓库里（git 跟踪，拉下分支就有）
 
@@ -203,7 +204,7 @@ PR #10 里的关键文件：
 - 推理只用测试图本身。**任何描述量和决定都不能用文件名里的信息**（日期、观测站）；文件名只能用来分折和做分析。
 - 每个实验先在 `EXPERIMENTS.md` 写好假设和通过标准再跑；通过标准是五折嵌套 ≥ +0.005、至少 4 折变好（今天的 K1 是事后补记，已注明并复核）。
 - 不要把 Kaggle token、`.env` 写进任何文件或提交。
-- **仓库公开前想清楚时机**：`PLAN.md` 写 11/13 公开，`README.md` 写「at competition close」。权重 + 代码一公开，别人在截止前就能直接复现我们的分数。先确认 Overview 的原话；如果允许，建议 11/15 06:00 UTC 提交截止后再公开、再填表。公开前查一遍提交历史里没有密钥。
+- **仓库已公开**（11/15 04:01 UTC，比截止早 2 小时，Harrison 定的）。以后推送的每个提交都是公开的：密钥、`.env`、比赛数据绝不能进仓库。
 - 仓库里的 `scratch/`、`runs/` 是忽略的，但不要用 `git add -A` 一把加，按文件名加。
 - Windows 上跑 CPU 任务：设 `OPENBLAS_NUM_THREADS=1`（否则每个 numpy/scipy 进程先占约 1.5 GB 提交内存，多开几个会把同机的 GPU 训练挤死）；一次别开超过 6 个进程。
 - 生成提交文件用 `--fp32`。CUDA 默认 float16，会让几个卡在阈值边上的候选进出。
