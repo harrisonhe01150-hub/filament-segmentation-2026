@@ -1,0 +1,106 @@
+{
+  "status": "COMPLETED",
+  "date": "2026-11-12",
+  "images": 707,
+  "records": 1154,
+  "scoring": "organisers' self-evaluation rule: every annotator record scored separately, IoU > 0.5 pairs are TP, pooled PQ; real label maps through src/postproc.score_file",
+  "protocol": "all probability maps out of fold; refiner of fold k trained without fold k; keep model cross-fitted by fold; its threshold chosen for fold k by an inner cross-fit that never sees fold k (strict nesting). The shape settings (blend 0.5, threshold 0.5, absorb 0.3) were chosen on all five folds: with that choice nested as well, the refiner row is 0.4483 and the final row about 0.455",
+  "stages": [
+    {
+      "name": "v2 single model, fixed keep rule (area >= 300, mean probability >= 0.85)",
+      "pq": 0.4409,
+      "tp": 5345,
+      "fp": 2866,
+      "fn": 2854,
+      "per_fold": [
+        0.4371,
+        0.4485,
+        0.4326,
+        0.4444,
+        0.4424
+      ]
+    },
+    {
+      "name": "two-model average, grouping through probability >= 0.1, written at >= 0.48 (predict.POST_STACK)",
+      "pq": 0.4456,
+      "tp": 5275,
+      "fp": 2594,
+      "fn": 2924,
+      "per_fold": [
+        0.4385,
+        0.4525,
+        0.4453,
+        0.4498,
+        0.4417
+      ]
+    },
+    {
+      "name": "previous + refiner shapes (blend 0.5, t_r 0.5, absorb 0.3)",
+      "pq": 0.449,
+      "tp": 5300,
+      "fp": 2560,
+      "fn": 2899,
+      "per_fold": [
+        0.443,
+        0.4543,
+        0.4475,
+        0.4528,
+        0.4471
+      ]
+    },
+    {
+      "name": "learned keep rule + written at >= 0.48 (predict_final --no-refiner)",
+      "pq_nested": 0.4537,
+      "per_fold_nested": [
+        0.4441,
+        0.4609,
+        0.4545,
+        0.4599,
+        0.449
+      ],
+      "at_tau_0.25": {
+        "pq": 0.4539,
+        "tp": 5106,
+        "fp": 2007,
+        "fn": 3093
+      },
+      "gain_over_fixed_rule_bootstrap_5_95": [
+        0.0054,
+        0.0104
+      ]
+    },
+    {
+      "name": "learned keep rule + refiner shapes (predict_final, the final pipeline)",
+      "pq_nested": 0.4566,
+      "per_fold_nested": [
+        0.4485,
+        0.4619,
+        0.4568,
+        0.4623,
+        0.4532
+      ],
+      "at_tau_0.25": {
+        "pq": 0.4563,
+        "tp": 5118,
+        "fp": 1995,
+        "fn": 3081
+      },
+      "gain_over_fixed_rule_bootstrap_5_95": [
+        0.0048,
+        0.0098
+      ],
+      "by_records_nested": {
+        "1": 0.4574,
+        "2": 0.4692,
+        "3": 0.4468
+      }
+    }
+  ],
+  "sources": [
+    "EXPERIMENTS.md",
+    "analysis/keep_fit.py",
+    "analysis/keep_eval.py",
+    "analysis/refine_eval.py"
+  ],
+  "keep_rule": "src/keep.py after the 11/12 review: member descriptors symmetric in the dense models, stable ranks"
+}

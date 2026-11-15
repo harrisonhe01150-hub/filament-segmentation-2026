@@ -53,6 +53,7 @@ One CSV for the whole test set, one row per predicted filament:
 | Path | Contents |
 |---|---|
 | `src/` | Training (`train_seg.py`), prediction from saved weights (`predict.py`), PQ metric, post-processing, CSV export |
+| `src/` (final pipeline) | `predict_final.py` runs it end to end: dense maps, seeds, learned keep rule (`keep.py`), per-filament refiner (`refine.py`) |
 | `configs/` | Training configs (`v2.json` = folds 0/1, `v2b.json` = folds 2/3/4) |
 | `notebooks/` | End-to-end notebook |
 | `analysis/`, `tests/` | Five-fold OOF re-scoring; CPU self-tests |
@@ -81,6 +82,18 @@ Train (CUDA only), then predict from saved weights (CUDA, MPS or CPU):
 python src/train_seg.py --config configs/v2.json --out runs/v2
 python src/predict.py --weights runs/v2 --config configs/v2.json --fp32 --out outputs/submission.csv
 ```
+
+Final pipeline (two full-data models, learned keep rule, per-filament refiner; files listed in `weights/README.md`):
+
+```bash
+python src/predict_final.py --dense weights/model_full_s2026.pt weights/model_full_s2027.pt --config configs/v2_full.json \
+    --refiners weights/refiner_f0.pt weights/refiner_f1.pt weights/refiner_f2.pt weights/refiner_f3.pt weights/refiner_f4.pt \
+    --keep-table weights/keep_table.npz --fp32 --out outputs/submission.csv
+```
+
+`--fp32` is how the submitted file was made (on a CUDA GPU the default is float16, which moves a few borderline
+candidates; CPU and Apple MPS always compute in float32). `--no-refiner` instead of `--refiners ...` gives the
+lighter variant (no refiner networks). Out-of-fold scores of every stage are in `EXPERIMENTS.md`.
 
 ## Rules worth remembering
 

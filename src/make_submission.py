@@ -8,7 +8,8 @@ from fastsweep import components
 
 
 def build_rows(files, stacks, c):
-    """files: image file names; stacks: list of uint8 (N,S,S) maps, one per model; c: post-processing.
+    """files: image file names; stacks: list of uint8 (N,S,S) maps, one per model; c: post-processing
+    (t_lo, close, min_area, min_mean, min_peak, and optionally bridge and draw, see predict.POST_STACK).
 
     Returns (rows, empty): rows are (filament_id, rle counts); empty lists images with no filament.
     """
@@ -17,12 +18,19 @@ def build_rows(files, stacks, c):
         # average at 2048 per image (memory-safe); same upsampling as OOF evaluation
         prob = np.mean([cv2.resize(s[i], (2048, 2048), interpolation=cv2.INTER_LINEAR).astype(np.float32)
                         for s in stacks], 0)
-        lab, feats = components(prob, c['t_lo'], c['close'])
+        lab, feats = components(prob, c['t_lo'], c['close'], c.get('bridge', 0))
         keep = (feats[:, 0] >= c['min_area']) & (feats[:, 1] >= c['min_mean']) & (feats[:, 2] >= c['min_peak'])
+        # optional "draw" level: instances are found and filtered at t_lo, but only their pixels with probability
+        # >= draw are written (a slightly tighter outline; masks stay disjoint because they only shrink)
+        draw = c.get('draw', c['t_lo'])
+        if draw > c['t_lo']:
+            lab = np.where(prob >= draw * 255, lab, 0)
         stem = f.rsplit('.', 1)[0]
         n = 0
         for j in np.flatnonzero(keep):
             m = np.asfortranarray((lab == j + 1).astype(np.uint8))
+            if not m.any():
+                continue
             rle = mu.encode(m)
             n += 1
             rows.append((f'{stem}_{n}', rle['counts'].decode()))

@@ -1,0 +1,2 @@
+# byte-for-byte copies of the files submitted to Kaggle (CRLF line ends; SHA256 in the README)
+results/test_submissions_1113/*.csv -text

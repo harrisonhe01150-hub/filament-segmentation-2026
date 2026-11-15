@@ -1,8 +1,98 @@
 [
   {
+    "ref": 58288676,
+    "fileName": "K1_refine_fp32.csv",
+    "date": "2026-11-13 00:06:13.460000",
+    "description": "Learned keep rule + per-filament refiner shapes (5 refiners, blended 50/50 with the dense map); full-data 2-seed maps; float32 end to end from the weights. OOF 0.4566 strictly nested vs 0.4490 with the fixed rule (5/5 folds); v2 baseline 0.4409",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.40",
+    "privateScore": ""
+  },
+  {
+    "ref": 58288179,
+    "fileName": "K1_light_fp32.csv",
+    "date": "2026-11-13 00:02:10.643000",
+    "description": "Learned keep rule (gradient boosting on 50 descriptors per candidate, symmetric in the two dense models, cross-fitted) + masks written at prob>=0.48; full-data 2-seed maps; float32 end to end from the weights. OOF about 0.454 vs 0.4456 with the fixed rule",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.40",
+    "privateScore": ""
+  },
+  {
+    "ref": 58267795,
+    "fileName": "full2_stack_b01_d048.csv",
+    "date": "2026-11-12 09:08:10.570000",
+    "description": "v2 full-data 2-seed + stack: pieces linked through prob>=0.1 are one filament, masks written at prob>=0.48 (OOF 0.4448 vs 0.4409, 5/5 folds)",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.39",
+    "privateScore": ""
+  },
+  {
+    "ref": 58267534,
+    "fileName": "full2_trim070.csv",
+    "date": "2026-11-12 08:57:48.233000",
+    "description": "v2 full-data 2-seed, same instances, masks written at prob>=0.70 (OOF -0.004 vs 0.40). Third point on the outline-tightness axis after 0.48 and 0.60",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.38",
+    "privateScore": ""
+  },
+  {
+    "ref": 58267270,
+    "fileName": "full2_trim060.csv",
+    "date": "2026-11-12 08:48:00.430000",
+    "description": "v2 full-data 2-seed, same instances, masks written at prob>=0.60 (thinner; OOF equal to 0.40 baseline). Checks whether test outlines are drawn tighter than train",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.39",
+    "privateScore": ""
+  },
+  {
+    "ref": 58267121,
+    "fileName": "full2_trim048.csv",
+    "date": "2026-11-12 08:42:31.630000",
+    "description": "v2 full-data 2-seed, same instances as before, masks written at prob>=0.48 instead of 0.40 (extent trim; OOF +0.0017, 5/5 folds, nested)",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.39",
+    "privateScore": ""
+  },
+  {
+    "ref": 58266744,
+    "fileName": "probe_full2_mm090.csv",
+    "date": "2026-11-12 08:27:17.277000",
+    "description": "PROBE (not a candidate): full-data 2-seed v2 ensemble, only min_mean .85->.90 (fewer, surer predictions). Purpose: learn how the board treats multi-annotator images; no test labels used",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.36",
+    "privateScore": ""
+  },
+  {
+    "ref": 58101061,
+    "fileName": "submission_v2_cpu.csv",
+    "date": "2026-11-07 18:13:16.600000",
+    "description": "v2 original folds 0+1 | refactored notebook CPU FP32 | 13a18c432efb",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.39",
+    "privateScore": ""
+  },
+  {
+    "ref": 57707205,
+    "fileName": "sub_v2full_2seed.csv",
+    "date": "2026-10-27 16:26:50.553000",
+    "description": "UNet effb4 1536, full-data (707 imgs, no holdout) 2-seed ens (2026+2027), same post as v2; no OOF score. S1 self-train + R1 2048 both failed OOF",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.39",
+    "privateScore": ""
+  },
+  {
+    "ref": 57692481,
+    "fileName": "sub_v2_5fold_mm083.csv",
+    "date": "2026-10-27 06:52:59.147000",
+    "description": "v2 5-fold ens, same as sub_v2_5fold but min_mean .83 (ensemble detection rate matched to single-model 7.2/img; probe of ensemble under-detection, no label use)",
+    "status": "SubmissionStatus.COMPLETE",
+    "publicScore": "0.38",
+    "privateScore": ""
+  },
+  {
     "ref": 57554507,
     "fileName": "sub_v2_5fold.csv",
-    "date": "2026-10-23T08:20:24.337000",
+    "date": "2026-10-23 08:20:24.337000",
     "description": "UNet effb4 1536, 5-fold ens, OOF707 PQ .4409",
     "status": "SubmissionStatus.COMPLETE",
     "publicScore": "0.38",
@@ -11,7 +101,7 @@
   {
     "ref": 57547798,
     "fileName": "sub_v2_f01.csv",
-    "date": "2026-10-23T03:39:12.003000",
+    "date": "2026-10-23 03:39:12.003000",
     "description": "UNet effb4 1536 soft-label 50ep, folds0+1 ens, OOF PQ .4429",
     "status": "SubmissionStatus.COMPLETE",
     "publicScore": "0.39",
@@ -20,7 +110,7 @@
   {
     "ref": 57544611,
     "fileName": "sub_v1_f01.csv",
-    "date": "2026-10-23T01:30:03.873000",
+    "date": "2026-10-23 01:30:03.873000",
     "description": "UNet effb4 1024 soft-label, folds0+1 ens, OOF PQ .4195",
     "status": "SubmissionStatus.COMPLETE",
     "publicScore": "0.37",
@@ -29,7 +119,7 @@
   {
     "ref": 57534211,
     "fileName": "submission_candidate_pq15.csv",
-    "date": "2026-10-22T18:05:08.737000",
+    "date": "2026-10-22 18:05:08.737000",
     "description": "PQ15 H1024 MaskRCNN+refiner baseline (calibration)",
     "status": "SubmissionStatus.COMPLETE",
     "publicScore": "0.28",

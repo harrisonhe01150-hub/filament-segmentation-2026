@@ -12,6 +12,11 @@ Optional config keys, all off by default (the defaults reproduce the original v2
   boundary       second output channel trained on filament outlines (experiment C), weight boundary_weight
   data_on_host   keep the training arrays in host memory on CUDA (frees ~1.3 GB per array)
   small_crop_p / area_weight_ref   experiment B, see CFG below
+  pseudo_dir     experiment S1: also train on unlabeled frames with soft pseudo-labels from
+                 scripts/make_pseudo.py (images.npy + probs_f<fold>.npy in that folder)
+  lt_dir         experiment LT (label transfer): frames taken by the same GONG site within a few minutes of a
+                 labelled training image reuse that image's annotations; each time the image is drawn, a random
+                 neighbour replaces it with probability lt_p (default 0.5). Needs frames_<size>.npy + index.json
 """
 import argparse
 import hashlib
@@ -286,7 +291,38 @@ def train_fold(fold, cfg, out_dir):
     S = cfg['size']
     X = np.stack([read_gray(root / 'train/train_images' / f, S) for f in tr])
     Y = np.stack([(soft_target(recs[f], anns, S) * 255).round().astype(np.uint8) for f in tr])
+    n_pseudo = 0
+    if cfg.get('pseudo_dir'):
+        # experiment S1: unlabeled frames after the real ones; their targets come from a teacher that never
+        # saw this fold's validation images. Filled into one preallocated array to keep peak RAM down.
+        pd = Path(cfg['pseudo_dir'])
+        imgs = np.load(pd / 'images.npy', mmap_mode='r')
+        probs = np.load(pd / f'probs_f{fold}.npy', mmap_mode='r')
+        assert imgs.shape == probs.shape and imgs.shape[1:] == (S, S), 'pseudo-labels made at another size'
+        assert not (cfg.get('boundary') or cfg.get('area_weight_ref') or cfg.get('small_crop_p')), \
+            'pseudo-labels have no boundary or filament maps'
+        n_pseudo = len(imgs)
+        for name, real, extra in (('X', X, imgs), ('Y', Y, probs)):
+            both = np.empty((len(real) + n_pseudo, S, S), np.uint8)
+            both[:len(real)] = real
+            both[len(real):] = extra
+            if name == 'X':
+                X = both
+            else:
+                Y = both
+        del imgs, probs
+    n_train = len(X)
+    lt_frames, lt_rows = None, None
+    if cfg.get('lt_dir'):
+        # experiment LT: the sun barely changes in a few minutes (rotation < 1 px), so the annotations of a labelled
+        # image also fit its neighbouring frames; those differ only in seeing and compression. Memory-mapped, so the
+        # extra frames cost no RAM; validation and test still use the single competition image.
+        ld = Path(cfg['lt_dir'])
+        lt_frames = np.load(ld / f'frames_{S}.npy', mmap_mode='r')
+        lt_index = json.loads((ld / 'index.json').read_text())
+        lt_rows = [lt_index.get(f, []) for f in tr]
     dev = pick_device()
+    pin_host = bool(cfg.get('pin_memory', os.name != 'nt'))  # see store() below
     use_b = bool(cfg.get('boundary'))
     if use_b:
         Bt = np.stack([(boundary_target(recs[f], anns, S, cfg.get('boundary_px', 5)) * 255).round().astype(np.uint8)
@@ -304,10 +340,11 @@ def train_fold(fold, cfg, out_dir):
         # host memory: at 1536 the GPU is nearly full already. Pinning can fail when RAM is busy
         # (B2 fold 0 crashed that way); unpinned memory only makes the copy a little slower.
         Wh = torch.from_numpy(W)
-        try:
-            Wh = Wh.pin_memory()
-        except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)) as e:
-            print(json.dumps(dict(event='warning', fold=fold, message=f'weight map not pinned: {e}'[:200])), flush=True)
+        if pin_host:
+            try:
+                Wh = Wh.pin_memory()
+            except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)) as e:
+                print(json.dumps(dict(event='warning', fold=fold, message=f'weight map not pinned: {e}'[:200])), flush=True)
         cen = torch.full((len(tr), max(1, max(map(len, cents))), 2), float('nan'))
         for i, cs in enumerate(cents):
             if cs:
@@ -315,6 +352,11 @@ def train_fold(fold, cfg, out_dir):
         ncen = torch.tensor([len(cs) for cs in cents]).to(dev)
         cen = cen.to(dev)
         extra_info = dict(small_filaments=int(ncen.sum()), images_with_small=int((ncen > 0).sum()))
+    if n_pseudo:
+        extra_info['pseudo'] = n_pseudo
+    if lt_rows is not None:
+        extra_info['lt_frames'] = sum(map(len, lt_rows))
+        extra_info['lt_images'] = sum(1 for r in lt_rows if r)
     print(json.dumps(dict(event='data', fold=fold, train=len(tr), val=len(va), secs=time.time() - t0, **extra_info)), flush=True)
     # cfg['seed'] fixes the fold split; train_seed only changes init/order/augmentation, so another seed
     # trains on exactly the same folds and its models can be averaged with the first
@@ -324,19 +366,31 @@ def train_fold(fold, cfg, out_dir):
     # small inputs fit on a CUDA card; at 2048 keep the dataset in pinned host memory. MPS and CPU share
     # host memory, so they always keep it on the device; data_on_host frees CUDA memory on small cards.
     on_gpu = (S <= 1536 or dev.type != 'cuda') and not (cfg.get('data_on_host') and dev.type == 'cuda')
-    store = lambda a: torch.from_numpy(a).to(dev) if on_gpu else torch.from_numpy(a).pin_memory()
+    # Pinning gigabytes of host memory can fail when RAM is busy, and on Windows the failed allocation left the
+    # CUDA context unusable: the next kernel launch died with "shared object initialization failed" (two full-data
+    # runs on 10-27). Unpinned copies cost ~2 ms per step here, so Windows skips pinning unless the config asks.
+    def store(a):
+        t = torch.from_numpy(a)
+        if on_gpu:
+            return t.to(dev)
+        if not pin_host:
+            return t
+        try:
+            return t.pin_memory()
+        except (RuntimeError, getattr(torch, 'AcceleratorError', RuntimeError)):
+            return t
     Xg, Yg = store(X), store(Y)
     Bg = store(Bt) if use_b else None
     model = build_model(cfg['encoder'], classes=2 if use_b else 1).to(dev)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['wd'])
     scaler = torch.amp.GradScaler(dev.type, enabled=dev.type != 'cpu')
-    steps_per_epoch = math.ceil(len(tr) / cfg['batch'])
+    steps_per_epoch = math.ceil(n_train / cfg["batch"])
     total = steps_per_epoch * cfg['epochs']
     step = 0
     log = []
     for ep in range(cfg['epochs']):
         model.train()
-        perm = torch.randperm(len(tr), device=dev, generator=gen)
+        perm = torch.randperm(n_train, device=dev, generator=gen)
         losses = []
         for i in range(steps_per_epoch):
             idx = perm[i * cfg['batch']:(i + 1) * cfg['batch']]
@@ -352,6 +406,13 @@ def train_fold(fold, cfg, out_dir):
             for part in idx.split(cfg.get('micro_batch') or len(idx)):
                 ic = part if on_gpu else part.cpu()
                 img = Xg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1)
+                if lt_rows is not None:
+                    for j, t in enumerate(part.tolist()):
+                        rows = lt_rows[t] if t < len(lt_rows) else []
+                        # with probability lt_p a neighbouring frame replaces the labelled image (same annotations)
+                        if rows and float(torch.rand(1, device=dev, generator=gen)) < cfg.get('lt_p', .5):
+                            pick = int(torch.randint(len(rows), (1,), device=dev, generator=gen))
+                            img[j, 0] = torch.from_numpy(np.ascontiguousarray(lt_frames[rows[pick]])).to(dev).float().div(255)
                 chans = [Yg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1)]  # mask, [outline], [weight]
                 if use_b:
                     chans.append(Bg[ic].to(dev, non_blocking=True).float().div(255).unsqueeze(1))
@@ -400,7 +461,7 @@ def train_fold(fold, cfg, out_dir):
         if not names:
             continue
         sub = 'test/test_images' if split == 'test' else 'train/train_images'
-        prob = predict(model, np.stack([read_gray(root / sub / f, S) for f in names]), cfg['tta'], all_channels=True)
+        prob = predict(model, np.stack([read_gray(root / sub / f, S) for f in names]), cfg['tta'], bs=cfg.get('predict_bs', 4), all_channels=True)
         res[f'{split}_files'] = np.array(names)
         res[f'{split}_prob'] = prob[:, 0]
         if use_b:

@@ -46,3 +46,29 @@ step from the RLE tables (`analysis/official_pq_check.py`) gives exactly the sam
 **Data use.** Training uses only the competition's training images and annotations (all annotators' masks; spine,
 area and category fields are not used by the baseline). Inference uses each test image alone. Public MAGFiLO
 annotations of the test images are never used.
+
+---
+
+## Addendum (Nov 12): the final pipeline (learned keep rule + refiner)
+
+Draft text for the report if the team adopts `src/predict_final.py` as the final pipeline; numbers are measured.
+
+**Code.** `src/predict_final.py` and `notebooks/end_to_end_final.ipynb` run all stages from the files in `weights/`:
+two dense models (float32, 81.7 MB each), five refiner networks (float16, 41.0 MB each) and the keep rule's
+training table (`keep_table.npz`, 1.0 MB, 6788 candidates x 50 descriptors with their labels). The keep model is
+not shipped as a pickle; it is refitted from the table at prediction time with a pinned scikit-learn 1.9.1
+(histogram gradient boosting without subsampling, a few seconds, deterministic).
+
+**Run time.** RTX 5070 Ti, float32 end to end: 419 s for the 180 test images (309 s without the refiners). CPU
+(12 threads, float32): 4238 s.
+
+**Determinism.** In float32 the GPU and the CPU produce the same submission: 1159 filaments each, 1158 masks
+identical and the remaining one with IoU 0.9994; 175 of the 176 images with filaments identical row for row. Against
+the float16 dense maps saved at training time, 2 borderline candidates enter and 1 leaves (their keep score is
+within rounding distance of the threshold), which is why the submitted file is produced in float32.
+
+**Validation protocol.** All dense maps are out of fold; the refiner and the keep model that process an image were
+trained without that image's fold, and no observation day is split across folds. The keep rule's threshold is
+chosen by an inner cross-fit that never sees the held-out fold. The keep rule's descriptors are bit-identical when
+the candidate bank is rebuilt without annotations (`tests/test_keep_rule.py` asserts this on a synthetic image).
+An independent re-implementation with its own descriptors reproduced the gain, and label-permutation tests remove it.

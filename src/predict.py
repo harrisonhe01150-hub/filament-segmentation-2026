@@ -21,6 +21,9 @@ from make_submission import build_rows, check_disjoint, write_csv
 
 # v2 post-processing, tuned on the five-fold OOF predictions (docs/BASELINE_AND_PROVENANCE.txt)
 POST = dict(t_lo=.4, close=8, min_area=300, min_mean=.85, min_peak=0)
+# v2 instances with two small, validated changes (EXPERIMENTS.md, 11/12): pieces linked through pixels of
+# probability >= 0.1 count as one filament, and each kept instance is written at probability >= 0.48
+POST_STACK = dict(POST, bridge=.1, draw=.48)
 TEST_IMAGES = Path('data/MAGFiLO_1.0_Kaggle_2026/test/test_images')
 
 
