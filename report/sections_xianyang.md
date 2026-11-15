@@ -4,7 +4,7 @@ Draft text for the 4-page report (TEAM_ROLES.md section 7); to be pasted into th
 Every number is from `EXPERIMENTS.md`, `results/evidence/final_sprint_1112/SUMMARY.json` or `results/oof_final/`
 (final-pipeline statistics and figures: `python analysis/report_figs.py --final results/oof_final report/figures/final`). PQ values are five-fold
 out-of-fold on the 707 training images, scored with the organizers' self-evaluation rule, unless stated otherwise.
-Items marked **TBD** wait for the Nov 13 leaderboard readings.
+Public leaderboard readings are from `EXPERIMENTS.md` (last section, Nov 13 00:06 UTC, 1504 teams).
 
 ---
 
@@ -91,8 +91,8 @@ threshold for fold k never see fold k).
 | Baseline: one model, fixed keep rule | 0.4409 | 0.39 |
 | + two-model average, weak-link grouping, written at >= 0.48 | 0.4456 | 0.39 |
 | + refined outlines (fixed keep rule) | 0.4490 | — |
-| Learned keep rule, written at >= 0.48 (light variant) | 0.4537 | **TBD** |
-| Learned keep rule + refined outlines (final) | 0.4566 | **TBD** |
+| Learned keep rule, written at >= 0.48 (light variant) | 0.4537 | 0.40 (rank 219) |
+| Learned keep rule + refined outlines (final) | 0.4566 | 0.40 (rank 210) |
 
 The learned keep rule keeps 7% fewer candidates than the fixed rule (4489 against 4824); false positives fall by 17%
 and true positives by 2% (final pipeline: 5197 TP, 2130 FP, 3002 FN; fixed rule with refined outlines: 5300 / 2560 /
@@ -122,7 +122,8 @@ the threshold finds no new useful candidates: of 541 candidates that appear only
 notebook exactly (PQ 0.4334, 1051 TP, 567 FP, 596 FN on a held-out fold, both ways). Test and validation images
 look the same to the model (kept filaments per image 7.27 vs 7.18, same size and confidence distributions), so the
 gap lies on the annotation side of the test set. We select models on out-of-fold PQ only; small local gains did
-move our leaderboard rank in the predicted direction (364 -> 353 -> 331 over three verified changes).
+move our leaderboard rank in the predicted direction (364 -> 353 -> 331 over three verified changes, then 210 with the final pipeline, whose reading of 0.40 is what
+the ratio predicted: 0.4566 x 0.875 = 0.3995).
 
 **What did not work** (all evaluated against a same-machine control; none passed +0.005 with 4 of 5 folds).
 Training changes: small-filament crop sampling and area-weighted loss (-0.003 to +0.002), a boundary output channel
